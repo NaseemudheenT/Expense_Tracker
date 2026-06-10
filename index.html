@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="header-card">
+      <div>
+        <p class="eyebrow">Expense Tracker</p>
+        <h1>Track your daily spending</h1>
+        <p class="subtitle">Add expenses fast, watch totals grow, and keep the history until you choose to clear it.</p>
+      </div>
+      <div class="summary-card">
+        <p>Total spent</p>
+        <h2 id="totalAmount">$0.00</h2>
+      </div>
+    </section>
+
+    <section class="form-card">
+      <form id="expenseForm">
+        <label>
+          Expense name
+          <input type="text" id="expenseName" placeholder="Coffee, groceries, rent" required />
+        </label>
+
+        <div class="row">
+          <label class="flex-grow">
+            Amount
+            <input type="number" id="expenseAmount" placeholder="0.00" step="0.01" min="0" required />
+          </label>
+
+          <label class="currency-label">
+            Currency
+            <select id="expenseCurrency">
+              <option value="$">USD ($)</option>
+              <option value="€">EUR (€)</option>
+              <option value="£">GBP (£)</option>
+              <option value="₹">INR (₹)</option>
+              <option value="¥">JPY (¥)</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="button primary">Add expense</button>
+          <button type="button" id="clearAll" class="button secondary">Clear history</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="history-card">
+      <div class="history-header">
+        <h2>Expense history</h2>
+        <p id="historyHint">Your expenses stay saved until you clear them.</p>
+      </div>
+      <div id="expenseList" class="expense-list">
+        <p class="empty-state">No expenses yet. Add one to begin tracking.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
