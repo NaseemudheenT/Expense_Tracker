@@ -152,8 +152,8 @@ async function loadExpenses() {
       orderBy("ts", "desc")
     );
     const snap = await getDocs(q);
-      expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      expenses = uniqById(expenses);
+    expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    expenses = uniqById(expenses);
     refresh();
   } catch(e) {
     console.error(e);
@@ -161,17 +161,17 @@ async function loadExpenses() {
   }
 }
 
-  function uniqById(arr) {
-    const seen = new Set();
-    const out = [];
-    for (const e of arr) {
-      if (!e || !e.id) continue;
-      if (seen.has(e.id)) continue;
-      seen.add(e.id);
-      out.push(e);
-    }
-    return out;
+function uniqById(arr) {
+  const seen = new Set();
+  const out = [];
+  for (const e of arr) {
+    if (!e || !e.id) continue;
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
+    out.push(e);
   }
+  return out;
+}
 
 window.doAddExpense = async function(event) {
   if (event?.preventDefault) event.preventDefault();
