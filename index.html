@@ -4,68 +4,150 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Expense Tracker</title>
-  <meta name="description" content="Simple Expense Tracker Web App to track daily spending easily and manage money efficiently.">
-  <meta name="keywords" content="expense tracker, budget app, money manager, finance tracker, daily expenses">
-  <meta name="author" content="Founder">
+  <meta name="description" content="Simple Expense Tracker Web App to track daily spending easily and manage money efficiently." />
+  <meta name="keywords" content="expense tracker, budget app, money manager, finance tracker, daily expenses" />
+  <meta name="author" content="Founder" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <section class="header-card">
-      <div>
-        <p class="eyebrow">Expense Tracker</p>
-        <h1>Track your daily spending</h1>
-        <p class="subtitle">Add expenses fast, watch totals grow, and keep the history until you choose to clear it.</p>
+      <div class="brand-row">
+        <div class="brand-info">
+          <img src="logo.png" alt="Expense Tracker logo" class="brand-logo" />
+          <div>
+            <p class="eyebrow">Expense Tracker</p>
+            <h1>Track spending with secure cloud backup</h1>
+          </div>
+        </div>
+        <div class="user-panel hidden" id="userPanel">
+          <div>
+            <p class="user-label">Signed in as</p>
+            <p class="user-name" id="userName"></p>
+          </div>
+          <button type="button" id="logoutButton" class="button secondary">Logout</button>
+        </div>
       </div>
-      <div class="summary-card">
-        <p>Total spent</p>
-        <h2 id="totalAmount">$0.00</h2>
+
+      <div class="summary-row">
+        <div class="summary-card accent-card">
+          <div class="summary-top">
+            <p>Today's expenses</p>
+            <span class="summary-badge">Live</span>
+          </div>
+          <h2 id="dailyTotal">$0.00</h2>
+          <p class="summary-note" id="dailyCount">0 expenses today</p>
+        </div>
+        <div class="summary-card">
+          <div class="summary-top">
+            <p>Date</p>
+            <span class="summary-badge light">Snapshot</span>
+          </div>
+          <h2 id="currentDate">—</h2>
+          <p class="summary-note">Your personal history is saved in Firestore.</p>
+        </div>
       </div>
     </section>
 
-    <section class="form-card">
-      <form id="expenseForm">
-        <label>
-          Expense name
-          <input type="text" id="expenseName" placeholder="Coffee, groceries, rent" required />
-        </label>
-
-        <div class="row">
-          <label class="flex-grow">
-            Amount
-            <input type="number" id="expenseAmount" placeholder="0.00" step="0.01" min="0" required />
-          </label>
-
-          <label class="currency-label">
-            Currency
-            <select id="expenseCurrency">
-              <option value="$">USD ($)</option>
-              <option value="€">EUR (€)</option>
-              <option value="£">GBP (£)</option>
-              <option value="₹">INR (₹)</option>
-              <option value="¥">JPY (¥)</option>
-            </select>
+    <section class="auth-card" id="authCard">
+      <div class="auth-header">
+        <div>
+          <p class="eyebrow">Secure login</p>
+          <h2 id="authTitle">Login to continue</h2>
+        </div>
+        <div class="auth-switch" id="authSwitch">
+          <button type="button" class="auth-tab active" data-auth="login">Login</button>
+          <button type="button" class="auth-tab" data-auth="signup">Sign up</button>
+        </div>
+      </div>
+      <form id="authForm">
+        <div class="auth-field auth-field-signup">
+          <label>Full Name
+            <input type="text" id="authName" placeholder="Jane Doe" />
           </label>
         </div>
 
-        <div class="actions">
-          <button type="submit" class="button primary">Add expense</button>
-          <button type="button" id="clearAll" class="button secondary">Clear history</button>
+        <label>Email
+          <input type="email" id="authEmail" placeholder="you@example.com" required />
+        </label>
+
+        <label>Password
+          <input type="password" id="authPassword" placeholder="Enter password" required minlength="6" />
+        </label>
+
+        <div class="auth-field auth-field-signup">
+          <label>Confirm password
+            <input type="password" id="authConfirmPassword" placeholder="Confirm password" minlength="6" />
+          </label>
+        </div>
+
+        <p class="auth-message" id="authMessage">Create your account or login to view your expenses.</p>
+        <div class="auth-actions">
+          <button type="submit" class="button primary" id="authSubmit">Continue</button>
         </div>
       </form>
     </section>
 
-    <section class="history-card">
-      <div class="history-header">
-        <h2>Expense history</h2>
-        <p id="historyHint">Your expenses stay saved until you clear them.</p>
-      </div>
-      <div id="expenseList" class="expense-list">
-        <p class="empty-state">No expenses yet. Add one to begin tracking.</p>
-      </div>
+    <section class="tracker-section hidden" id="trackerSection">
+      <section class="form-card">
+        <div class="form-header">
+          <div>
+            <p class="eyebrow">Add new expense</p>
+            <h2>Enter expense details</h2>
+          </div>
+          <div class="search-group">
+            <label>Search expenses
+              <input type="search" id="searchInput" placeholder="Search by name, amount or currency" />
+            </label>
+          </div>
+        </div>
+
+        <form id="expenseForm">
+          <div class="row">
+            <label class="currency-label">
+              Currency
+              <select id="expenseCurrency">
+                <option value="$">USD ($)</option>
+                <option value="€">EUR (€)</option>
+                <option value="£">GBP (£)</option>
+                <option value="₹">INR (₹)</option>
+                <option value="¥">JPY (¥)</option>
+              </select>
+            </label>
+
+            <label class="flex-grow">
+              Expense name
+              <input type="text" id="expenseName" placeholder="Coffee, groceries, rent" required />
+            </label>
+
+            <label class="amount-label">
+              Amount
+              <input type="number" id="expenseAmount" placeholder="0.00" step="0.01" min="0" required />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="button primary">Add expense</button>
+            <button type="button" id="clearAll" class="button secondary">Clear all</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="history-card">
+        <div class="history-header">
+          <div>
+            <p class="eyebrow">Expense history</p>
+            <h2>Saved transactions</h2>
+          </div>
+          <p id="historyHint">Newest expenses are shown first and grouped by date.</p>
+        </div>
+        <div id="expenseList" class="expense-list">
+          <p class="empty-state">No expenses yet. Add one to begin tracking.</p>
+        </div>
+      </section>
     </section>
   </main>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
