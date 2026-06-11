@@ -152,13 +152,26 @@ async function loadExpenses() {
       orderBy("ts", "desc")
     );
     const snap = await getDocs(q);
-    expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      expenses = uniqById(expenses);
     refresh();
   } catch(e) {
     console.error(e);
     toast("Failed to load expenses. Check Firestore index.");
   }
 }
+
+  function uniqById(arr) {
+    const seen = new Set();
+    const out = [];
+    for (const e of arr) {
+      if (!e || !e.id) continue;
+      if (seen.has(e.id)) continue;
+      seen.add(e.id);
+      out.push(e);
+    }
+    return out;
+  }
 
 window.doAddExpense = async function(event) {
   if (event?.preventDefault) event.preventDefault();
@@ -205,6 +218,7 @@ window.doAddExpense = async function(event) {
     };
     const ref = await addDoc(collection(db, "expenses"), exp);
     expenses.unshift({ id: ref.id, ...exp });
+    expenses = uniqById(expenses);
     if (nameEl) nameEl.value = "";
     if (amtEl)  amtEl.value  = "";
     refresh();
