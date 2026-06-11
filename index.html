@@ -5,134 +5,185 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Expence Tracker</title>
   <link rel="icon" href="logo.png" type="image/png"/>
-  <link rel="stylesheet" href="styles.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
 
-<!-- ========================================
+<!-- ============================================================
+     LOADING SCREEN
+============================================================ -->
+<div id="loading-screen" class="loading-screen">
+  <div class="loading-logo">
+    <img src="logo.png" alt="Logo"/>
+    <div class="loading-spinner"></div>
+  </div>
+</div>
+
+<!-- ============================================================
      AUTH SCREEN
-======================================== -->
-<div id="authScreen">
-  <div class="auth-box">
-    <div class="auth-logo-wrap">
-      <img src="logo.png" alt="Expence Tracker" class="auth-logo-img"/>
-    </div>
-    <h1 class="auth-brand">EXPENCE<span>— TRACKER —</span></h1>
+============================================================ -->
+<div id="auth-screen" class="auth-screen hide">
+  <div class="auth-bg-pattern"></div>
+  <div class="auth-container">
 
-    <div class="auth-tabs">
-      <button class="atab active" id="tabLogin" onclick="switchTab('login')">Login</button>
-      <button class="atab" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
-    </div>
-
-    <!-- LOGIN -->
-    <div id="loginForm">
-      <div class="field-row">
-        <span class="field-icon"><i class="fas fa-envelope"></i></span>
-        <input type="email" id="lEmail" placeholder="Email address" autocomplete="email"/>
+    <!-- Logo -->
+    <div class="auth-brand">
+      <img src="logo.png" alt="Expence Tracker Logo" class="auth-brand-logo"/>
+      <div class="auth-brand-text">
+        <span class="auth-brand-name">EXPENCE</span>
+        <span class="auth-brand-sub">— TRACKER —</span>
       </div>
-      <div class="field-row">
-        <span class="field-icon"><i class="fas fa-lock"></i></span>
-        <input type="password" id="lPass" placeholder="Password" autocomplete="current-password"/>
-        <button class="eye-btn" onclick="eyeToggle('lPass',this)"><i class="fas fa-eye-slash"></i></button>
-      </div>
-      <p class="auth-err" id="lErr"></p>
-      <button class="auth-submit-btn" id="lBtn" onclick="doLogin()">
-        <span id="lBtnTxt">Login</span><span id="lSpin" class="spin hide"></span>
-      </button>
     </div>
 
-    <!-- SIGNUP -->
-    <div id="signupForm" class="hide">
-      <div class="field-row">
-        <span class="field-icon"><i class="fas fa-user"></i></span>
-        <input type="text" id="sName" placeholder="Full Name" autocomplete="name"/>
+    <!-- Card -->
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button id="tab-login-btn" class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+        <button id="tab-signup-btn" class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
       </div>
-      <div class="field-row">
-        <span class="field-icon"><i class="fas fa-envelope"></i></span>
-        <input type="email" id="sEmail" placeholder="Email address" autocomplete="email"/>
+
+      <!-- LOGIN -->
+      <div id="auth-login" class="auth-form">
+        <h2 class="auth-form-title">Welcome Back</h2>
+        <p class="auth-form-sub">Sign in to your account</p>
+
+        <div class="field">
+          <label>Email Address</label>
+          <div class="input-box">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="li-email" placeholder="Enter your email" autocomplete="email"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="input-box">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="li-pass" placeholder="Enter your password" autocomplete="current-password"/>
+            <button class="eye-btn" type="button" onclick="toggleEye('li-pass',this)"><i class="fas fa-eye-slash"></i></button>
+          </div>
+        </div>
+        <p class="auth-err" id="li-err"></p>
+        <button class="btn-gold btn-full" id="li-btn" onclick="doLogin()">
+          <span id="li-btn-txt"><i class="fas fa-sign-in-alt"></i> Login</span>
+          <span id="li-btn-spin" class="btn-spin hide"></span>
+        </button>
       </div>
-      <div class="field-row">
-        <span class="field-icon"><i class="fas fa-lock"></i></span>
-        <input type="password" id="sPass" placeholder="Password (min 6 chars)" autocomplete="new-password"/>
-        <button class="eye-btn" onclick="eyeToggle('sPass',this)"><i class="fas fa-eye-slash"></i></button>
+
+      <!-- SIGNUP -->
+      <div id="auth-signup" class="auth-form hide">
+        <h2 class="auth-form-title">Create Account</h2>
+        <p class="auth-form-sub">Start tracking your expenses</p>
+
+        <div class="field">
+          <label>Full Name</label>
+          <div class="input-box">
+            <i class="fas fa-user"></i>
+            <input type="text" id="su-name" placeholder="Enter your full name" autocomplete="name"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Email Address</label>
+          <div class="input-box">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="su-email" placeholder="Enter your email" autocomplete="email"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="input-box">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="su-pass" placeholder="Minimum 6 characters" autocomplete="new-password"/>
+            <button class="eye-btn" type="button" onclick="toggleEye('su-pass',this)"><i class="fas fa-eye-slash"></i></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <div class="input-box">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="su-conf" placeholder="Re-enter your password" autocomplete="new-password"/>
+            <button class="eye-btn" type="button" onclick="toggleEye('su-conf',this)"><i class="fas fa-eye-slash"></i></button>
+          </div>
+        </div>
+        <p class="auth-err" id="su-err"></p>
+        <button class="btn-gold btn-full" id="su-btn" onclick="doSignup()">
+          <span id="su-btn-txt"><i class="fas fa-user-plus"></i> Create Account</span>
+          <span id="su-btn-spin" class="btn-spin hide"></span>
+        </button>
       </div>
-      <div class="field-row">
-        <span class="field-icon"><i class="fas fa-lock"></i></span>
-        <input type="password" id="sConf" placeholder="Confirm Password" autocomplete="new-password"/>
-        <button class="eye-btn" onclick="eyeToggle('sConf',this)"><i class="fas fa-eye-slash"></i></button>
-      </div>
-      <p class="auth-err" id="sErr"></p>
-      <button class="auth-submit-btn" id="sBtn" onclick="doSignup()">
-        <span id="sBtnTxt">Create Account</span><span id="sSpin" class="spin hide"></span>
-      </button>
     </div>
   </div>
 </div>
 
-<!-- ========================================
+<!-- ============================================================
      MAIN APP
-======================================== -->
-<div id="appScreen" class="hide">
+============================================================ -->
+<div id="main-app" class="main-app hide">
 
-  <!-- TOP HEADER -->
-  <header class="topbar">
-    <button class="icon-btn" onclick="openSidebar()"><i class="fas fa-bars"></i></button>
-    <div class="topbar-center">
-      <img src="logo.png" alt="logo" class="topbar-logo"/>
-      <div class="topbar-brand">
-        <span class="tb-main">EXPENCE</span>
-        <span class="tb-sub">— TRACKER —</span>
+  <!-- HEADER -->
+  <header class="app-header">
+    <button class="hdr-icon-btn" onclick="openSidebar()">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="hdr-brand">
+      <img src="logo.png" alt="Logo"/>
+      <div>
+        <div class="hdr-title">EXPENCE</div>
+        <div class="hdr-sub">— TRACKER —</div>
       </div>
     </div>
-    <button class="icon-btn" id="themeBtn" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+    <button class="hdr-icon-btn" id="theme-btn" onclick="toggleDark()">
+      <i class="fas fa-moon"></i>
+    </button>
   </header>
 
   <!-- SIDEBAR OVERLAY -->
-  <div class="sb-overlay hide" id="sbOverlay" onclick="closeSidebar()"></div>
-  <aside class="sidebar hide" id="sidebar">
-    <div class="sb-profile">
+  <div id="sb-overlay" class="sb-overlay hide" onclick="closeSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="sidebar sidebar-closed">
+    <div class="sb-user">
       <div class="sb-avatar"><i class="fas fa-user"></i></div>
-      <div>
-        <p class="sb-name" id="sbName">User</p>
-        <p class="sb-email" id="sbEmail">user@email.com</p>
+      <div class="sb-info">
+        <p id="sb-name" class="sb-name">User</p>
+        <p id="sb-email" class="sb-email">email@example.com</p>
       </div>
     </div>
     <nav class="sb-nav">
-      <button onclick="goView('home');closeSidebar()"><i class="fas fa-home"></i>Home</button>
-      <button onclick="goView('stats');closeSidebar()"><i class="fas fa-chart-bar"></i>Stats</button>
-      <button onclick="goView('calendar');closeSidebar()"><i class="fas fa-calendar-alt"></i>Calendar</button>
-      <button onclick="goView('settings');closeSidebar()"><i class="fas fa-cog"></i>Settings</button>
+      <button onclick="goPage('home');closeSidebar()"><i class="fas fa-home"></i><span>Home</span></button>
+      <button onclick="goPage('stats');closeSidebar()"><i class="fas fa-chart-bar"></i><span>Stats</span></button>
+      <button onclick="goPage('calendar');closeSidebar()"><i class="fas fa-calendar-alt"></i><span>Calendar</span></button>
+      <button onclick="goPage('settings');closeSidebar()"><i class="fas fa-cog"></i><span>Settings</span></button>
     </nav>
-    <button class="sb-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i>Logout</button>
+    <button class="sb-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></button>
   </aside>
 
-  <!-- ── HOME VIEW ── -->
-  <div id="viewHome" class="view active-view">
+  <!-- ── HOME PAGE ── -->
+  <div id="page-home" class="page active-page">
 
-    <!-- Today summary card -->
+    <!-- Summary Card -->
     <div class="summary-card">
       <div class="sc-left">
         <p class="sc-lbl">TODAY'S EXPENSES</p>
-        <p class="sc-amount" id="todayTotal">₹ 0.00</p>
-        <p class="sc-sub"><i class="fas fa-wallet"></i>&nbsp;<span id="todayCount">0</span> Expenses Today</p>
+        <h2 class="sc-amount" id="sc-amount">₹ 0.00</h2>
+        <p class="sc-count"><i class="fas fa-wallet"></i> <span id="sc-count">0</span> Expenses Today</p>
       </div>
       <div class="sc-right">
         <i class="fas fa-calendar-alt sc-cal"></i>
-        <p class="sc-date" id="scDate"></p>
-        <p class="sc-day" id="scDay"></p>
+        <p class="sc-date" id="sc-date"></p>
+        <p class="sc-day" id="sc-day"></p>
       </div>
     </div>
 
-    <!-- Add expense -->
+    <!-- Add Expense -->
     <div class="card">
-      <p class="card-title"><i class="fas fa-plus-circle"></i>ADD NEW EXPENSE</p>
-      <div class="form-grid">
-        <div class="fg-item">
+      <div class="card-label"><i class="far fa-edit"></i> ADD NEW EXPENSE</div>
+      <div class="add-row">
+        <div class="add-field">
           <label>Currency</label>
-          <div class="sel-wrap">
-            <select id="curSel" onchange="document.getElementById('curBadge').textContent=this.value">
+          <div class="select-box">
+            <select id="add-currency" onchange="syncCurrencyBadge()">
               <option value="₹">₹ INR</option>
               <option value="$">$ USD</option>
               <option value="€">€ EUR</option>
@@ -141,127 +192,144 @@
               <option value="₩">₩ KRW</option>
               <option value="A$">A$ AUD</option>
               <option value="C$">C$ CAD</option>
+              <option value="د.إ">د.إ AED</option>
+              <option value="SGD">SGD</option>
             </select>
             <i class="fas fa-chevron-down"></i>
           </div>
         </div>
-        <div class="fg-item fg-grow">
+        <div class="add-field add-field-grow">
           <label>Expense Name</label>
-          <input type="text" id="expName" placeholder="Enter expense name" onkeydown="if(event.key==='Enter'){ event.preventDefault(); doAddExpense(event); }"/>
+          <input type="text" id="add-name" placeholder="Enter expense name" onkeydown="if(event.key==='Enter')doAddExpense()"/>
         </div>
-        <div class="fg-item">
+        <div class="add-field">
           <label>Amount</label>
-          <div class="amt-wrap">
-            <input type="number" id="expAmt" placeholder="0.00" min="0" step="0.01" onkeydown="if(event.key==='Enter'){ event.preventDefault(); doAddExpense(event); }"/>
-            <span id="curBadge" class="cur-badge">₹</span>
+          <div class="amount-box">
+            <input type="number" id="add-amount" placeholder="0.00" min="0" step="0.01" onkeydown="if(event.key==='Enter')doAddExpense()"/>
+            <span id="cur-badge" class="cur-badge">₹</span>
           </div>
         </div>
       </div>
-      <p class="form-err" id="addErr"></p>
-      <button type="button" class="gold-btn" id="addBtn" onclick="doAddExpense()">
-        <span id="addBtnTxt"><i class="fas fa-plus"></i>&nbsp;Add Expense</span>
-        <span id="addSpin" class="spin hide"></span>
+      <p class="add-err" id="add-err"></p>
+      <button class="btn-gold btn-full mt12" id="add-btn" onclick="doAddExpense()">
+        <span id="add-btn-txt"><i class="fas fa-plus"></i> Add Expense</span>
+        <span id="add-btn-spin" class="btn-spin hide"></span>
       </button>
     </div>
 
-    <!-- Search + History -->
-    <div class="search-bar">
+    <!-- Expense History -->
+    <div class="history-top">
+      <div class="card-label"><i class="fas fa-history"></i> EXPENSE HISTORY</div>
+      <button class="clear-all-btn" onclick="doClearAll()"><i class="fas fa-trash-alt"></i> Clear All</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-box">
       <i class="fas fa-search"></i>
-      <input type="text" id="searchInp" placeholder="Search expenses…" oninput="renderHistory()"/>
+      <input type="text" id="search-inp" placeholder="Search expenses..." oninput="renderHistory()"/>
     </div>
 
-    <div class="hist-header">
-      <p class="card-title" style="margin:0"><i class="fas fa-history"></i>EXPENSE HISTORY</p>
-      <button class="clear-all-btn" onclick="doClearAll()"><i class="fas fa-trash-alt"></i>Clear All</button>
+    <div id="history-list" class="history-list">
+      <!-- rendered by JS -->
     </div>
 
-    <div id="historyList"></div>
+  </div><!-- /page-home -->
 
-  </div><!-- /viewHome -->
-
-  <!-- ── STATS VIEW ── -->
-  <div id="viewStats" class="view">
-    <p class="view-title">Statistics</p>
-    <div class="stats-cards" id="statsCards"></div>
-    <div class="card" style="margin-top:14px">
-      <p class="card-title"><i class="fas fa-chart-bar"></i>LAST 7 DAYS</p>
-      <div id="barChart" class="bar-chart"></div>
-    </div>
-    <div class="card" style="margin-top:14px">
-      <p class="card-title"><i class="fas fa-list"></i>TOP CATEGORIES</p>
-      <div id="topList" class="top-list"></div>
+  <!-- ── STATS PAGE ── -->
+  <div id="page-stats" class="page">
+    <div class="page-scroll">
+      <h2 class="page-title">Statistics</h2>
+      <div id="stats-cards" class="stats-grid"></div>
+      <div class="card mt16">
+        <div class="card-label"><i class="fas fa-chart-bar"></i> LAST 7 DAYS</div>
+        <div id="bar-chart" class="bar-chart"></div>
+      </div>
+      <div class="card mt16">
+        <div class="card-label"><i class="fas fa-list"></i> TOP EXPENSES</div>
+        <div id="top-expenses"></div>
+      </div>
     </div>
   </div>
 
-  <!-- ── CALENDAR VIEW ── -->
-  <div id="viewCalendar" class="view">
-    <p class="view-title">Calendar</p>
-    <div class="cal-nav">
-      <button class="cal-arrow" onclick="calShift(-1)"><i class="fas fa-chevron-left"></i></button>
-      <span id="calLabel" class="cal-label"></span>
-      <button class="cal-arrow" onclick="calShift(1)"><i class="fas fa-chevron-right"></i></button>
+  <!-- ── CALENDAR PAGE ── -->
+  <div id="page-calendar" class="page">
+    <div class="page-scroll">
+      <h2 class="page-title">Calendar</h2>
+      <div class="cal-header">
+        <button class="cal-nav-btn" onclick="calMove(-1)"><i class="fas fa-chevron-left"></i></button>
+        <span id="cal-label" class="cal-label"></span>
+        <button class="cal-nav-btn" onclick="calMove(1)"><i class="fas fa-chevron-right"></i></button>
+      </div>
+      <div class="card">
+        <div id="cal-grid" class="cal-grid"></div>
+      </div>
+      <div id="cal-detail" class="card mt12 hide">
+        <div id="cal-detail-inner"></div>
+      </div>
     </div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <div class="cal-weeks" id="calWeeks"></div>
-      <div class="cal-grid" id="calGrid"></div>
-    </div>
-    <div id="calDetail" class="cal-detail hide"></div>
   </div>
 
-  <!-- ── SETTINGS VIEW ── -->
-  <div id="viewSettings" class="view">
-    <p class="view-title">Settings</p>
-    <div class="card settings-card">
-      <div class="settings-user">
-        <i class="fas fa-user-circle su-icon"></i>
-        <div>
-          <p class="su-name" id="suName"></p>
-          <p class="su-email" id="suEmail"></p>
+  <!-- ── SETTINGS PAGE ── -->
+  <div id="page-settings" class="page">
+    <div class="page-scroll">
+      <h2 class="page-title">Settings</h2>
+      <div class="card settings-card">
+        <div class="settings-user">
+          <div class="settings-avatar"><i class="fas fa-user-circle"></i></div>
+          <div>
+            <p id="set-name" class="settings-name"></p>
+            <p id="set-email" class="settings-email"></p>
+          </div>
         </div>
+        <div class="settings-row">
+          <div class="settings-row-left"><i class="fas fa-moon"></i> Dark Mode</div>
+          <label class="toggle">
+            <input type="checkbox" id="dark-chk" onchange="toggleDark()"/>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-left"><i class="fas fa-coins"></i> Default Currency</div>
+          <select id="set-currency" class="set-select" onchange="saveDefCurrency()">
+            <option value="₹">₹ INR</option>
+            <option value="$">$ USD</option>
+            <option value="€">€ EUR</option>
+            <option value="£">£ GBP</option>
+            <option value="¥">¥ JPY</option>
+            <option value="₩">₩ KRW</option>
+            <option value="A$">A$ AUD</option>
+            <option value="C$">C$ CAD</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-left"><i class="fas fa-info-circle"></i> App Version</div>
+          <span class="settings-val">v2.0.0</span>
+        </div>
+        <button class="btn-logout-full" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
       </div>
-      <div class="settings-row">
-        <span><i class="fas fa-moon"></i>&nbsp;Dark Mode</span>
-        <label class="sw">
-          <input type="checkbox" id="darkChk" onchange="toggleTheme()"/>
-          <span class="sw-track"></span>
-        </label>
-      </div>
-      <div class="settings-row">
-        <span><i class="fas fa-coins"></i>&nbsp;Default Currency</span>
-        <select id="defCurSel" class="settings-sel" onchange="saveDefCur()">
-          <option value="₹">₹ INR</option>
-          <option value="$">$ USD</option>
-          <option value="€">€ EUR</option>
-          <option value="£">£ GBP</option>
-          <option value="¥">¥ JPY</option>
-        </select>
-      </div>
-      <div class="settings-row">
-        <span><i class="fas fa-info-circle"></i>&nbsp;Version</span>
-        <span class="settings-val">1.0.0</span>
-      </div>
-      <button class="danger-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i>&nbsp;Logout</button>
     </div>
   </div>
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="bn-btn active" id="bnHome" onclick="goView('home')">
+    <button id="nav-home" class="nav-item active" onclick="goPage('home')">
       <i class="fas fa-home"></i><span>Home</span>
     </button>
-    <button class="bn-btn" id="bnStats" onclick="goView('stats')">
+    <button id="nav-stats" class="nav-item" onclick="goPage('stats')">
       <i class="fas fa-chart-bar"></i><span>Stats</span>
     </button>
-    <button class="bn-fab" onclick="fabAction()"><i class="fas fa-plus"></i></button>
-    <button class="bn-btn" id="bnCalendar" onclick="goView('calendar')">
+    <button class="nav-fab" onclick="fabAction()">
+      <i class="fas fa-plus"></i>
+    </button>
+    <button id="nav-calendar" class="nav-item" onclick="goPage('calendar')">
       <i class="fas fa-calendar-alt"></i><span>Calendar</span>
     </button>
-    <button class="bn-btn" id="bnSettings" onclick="goView('settings')">
+    <button id="nav-settings" class="nav-item" onclick="goPage('settings')">
       <i class="fas fa-cog"></i><span>Settings</span>
     </button>
   </nav>
 
-</div><!-- /appScreen -->
+</div><!-- /main-app -->
 
 <!-- TOAST -->
 <div id="toast" class="toast hide"></div>
