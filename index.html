@@ -147,18 +147,18 @@
         </div>
         <div class="fg-item fg-grow">
           <label>Expense Name</label>
-          <input type="text" id="expName" placeholder="Enter expense name" onkeydown="if(event.key==='Enter')doAddExpense()"/>
+          <input type="text" id="expName" placeholder="Enter expense name" onkeydown="if(event.key==='Enter'){ event.preventDefault(); doAddExpense(event); }"/>
         </div>
         <div class="fg-item">
           <label>Amount</label>
           <div class="amt-wrap">
-            <input type="number" id="expAmt" placeholder="0.00" min="0" step="0.01" onkeydown="if(event.key==='Enter')doAddExpense()"/>
+            <input type="number" id="expAmt" placeholder="0.00" min="0" step="0.01" onkeydown="if(event.key==='Enter'){ event.preventDefault(); doAddExpense(event); }"/>
             <span id="curBadge" class="cur-badge">₹</span>
           </div>
         </div>
       </div>
       <p class="form-err" id="addErr"></p>
-      <button class="gold-btn" id="addBtn" onclick="doAddExpense()">
+      <button type="button" class="gold-btn" id="addBtn" onclick="doAddExpense()">
         <span id="addBtnTxt"><i class="fas fa-plus"></i>&nbsp;Add Expense</span>
         <span id="addSpin" class="spin hide"></span>
       </button>
