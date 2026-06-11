@@ -1,175 +1,243 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --gold: #d4a437;
-  --gold-dark: #b8861d;
-  --navy: #1a2540;
-  --bg: #f5f5f0;
-  --card: #ffffff;
-  --text: #1a2540;
-  --muted: #8a8a8a;
-  --danger: #e63946;
-  --border: #ececec;
-  --shadow: 0 4px 20px rgba(0,0,0,0.06);
-}
-body {
-  font-family: 'Poppins', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-}
-.hidden { display: none !important; }
+import {
+  auth, db,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+  onAuthStateChanged, updateProfile,
+  collection, addDoc, deleteDoc, doc, getDocs,
+  query, where, orderBy, writeBatch, serverTimestamp,
+} from "./firebase.js";
 
-/* AUTH */
-.auth-screen {
-  min-height: 100vh;
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #f5f5f0, #fff8e7);
-}
-.auth-card {
-  background: var(--card);
-  padding: 32px 24px;
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-  width: 100%; max-width: 400px;
-}
-.auth-logo { display:block; margin: 0 auto 18px; width: 110px; }
-.auth-tabs {
-  display: flex; background: #f1f1ea; border-radius: 10px; padding: 4px; margin-bottom: 18px;
-}
-.auth-tab {
-  flex: 1; padding: 10px; border: none; background: transparent;
-  border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--muted);
-  font-family: inherit;
-}
-.auth-tab.active { background: var(--gold); color: #fff; }
-.auth-form { display: flex; flex-direction: column; gap: 12px; }
-.auth-form input {
-  padding: 12px 14px; border: 1px solid var(--border);
-  border-radius: 10px; font-size: 14px; font-family: inherit;
-  outline: none; transition: border .2s;
-}
-.auth-form input:focus { border-color: var(--gold); }
-.form-error { color: var(--danger); font-size: 13px; min-height: 16px; text-align: center; }
+// ---------- DOM ----------
+const authScreen = document.getElementById("authScreen");
+const app = document.getElementById("app");
+const tabLogin = document.getElementById("tabLogin");
+const tabSignup = document.getElementById("tabSignup");
+const loginForm = document.getElementById("loginForm");
+const signupForm = document.getElementById("signupForm");
+const loginError = document.getElementById("loginError");
+const signupError = document.getElementById("signupError");
+const logoutBtn = document.getElementById("logoutBtn");
+const userNameEl = document.getElementById("userName");
 
-.btn-primary {
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  color: #fff; border: none; padding: 12px 16px;
-  border-radius: 10px; font-weight: 600; cursor: pointer;
-  font-family: inherit; font-size: 14px;
-  transition: transform .15s, box-shadow .2s;
-}
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(212,164,55,.4); }
-.btn-primary.full { width: 100%; padding: 14px; }
+const todayTotalEl = document.getElementById("todayTotal");
+const todayCountEl = document.getElementById("todayCount");
+const todayDateEl = document.getElementById("todayDate");
+const todayDayEl = document.getElementById("todayDay");
 
-/* APP */
-.app { max-width: 600px; margin: 0 auto; padding: 16px; padding-bottom: 40px; }
-.app-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px;
-}
-.icon-btn {
-  width: 42px; height: 42px; border-radius: 10px; border: none;
-  background: #fff; box-shadow: var(--shadow); cursor: pointer;
-  color: var(--navy); font-size: 16px;
-}
-.brand { display: flex; align-items: center; gap: 8px; flex-direction: column; }
-.brand img { width: 60px; }
-.brand h1 { font-size: 18px; letter-spacing: 4px; color: var(--navy); }
-.brand span { font-size: 10px; letter-spacing: 6px; color: var(--gold); display:block; text-align:center; }
-.welcome { text-align: center; color: var(--muted); margin: 8px 0 16px; font-size: 14px; }
+const expenseForm = document.getElementById("expenseForm");
+const expenseName = document.getElementById("expenseName");
+const expenseAmount = document.getElementById("expenseAmount");
+const currencyEl = document.getElementById("currency");
 
-.summary-card {
-  background: #fff; border-radius: 16px; padding: 18px;
-  display: flex; box-shadow: var(--shadow); margin-bottom: 16px;
-  position: relative; overflow: hidden;
-}
-.summary-card::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 70px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  border-radius: 50% 0 0 50% / 50% 0 0 50%; transform: translateX(-30px);
-}
-.summary-left { flex: 1; padding-left: 50px; position: relative; z-index: 1; }
-.summary-left .label { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
-.summary-left h2 { color: var(--gold-dark); font-size: 28px; margin: 4px 0; }
-.summary-left .sub { font-size: 12px; color: var(--muted); }
-.summary-right {
-  text-align: center; padding-left: 18px; border-left: 1px solid var(--border);
-}
-.summary-right i { color: var(--gold); font-size: 22px; margin-bottom: 6px; }
-.summary-right p { font-weight: 600; font-size: 14px; }
-.summary-right span { font-size: 11px; color: var(--muted); }
+const historyList = document.getElementById("historyList");
+const searchInput = document.getElementById("searchInput");
+const clearAllBtn = document.getElementById("clearAllBtn");
 
-.card {
-  background: #fff; border-radius: 14px; padding: 16px;
-  box-shadow: var(--shadow); margin-bottom: 16px;
-}
-.card h3 {
-  font-size: 13px; letter-spacing: 1px; color: var(--navy);
-  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
-}
-.card h3 i { color: var(--gold); }
+let currentUser = null;
+let allExpenses = [];
 
-.expense-form { display: flex; flex-wrap: wrap; gap: 10px; }
-.field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
-.field.grow { flex: 2; }
-.field label { font-size: 12px; color: var(--muted); }
-.field input, .field select {
-  padding: 10px 12px; border: 1px solid var(--border);
-  border-radius: 8px; font-size: 13px; font-family: inherit; outline: none;
-  background: #fff;
+// ---------- Date header ----------
+function setTodayDate() {
+  const d = new Date();
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  todayDateEl.textContent = `${String(d.getDate()).padStart(2,"0")} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  todayDayEl.textContent = days[d.getDay()];
 }
-.field input:focus, .field select:focus { border-color: var(--gold); }
+setTodayDate();
 
-.history-header {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
-}
-.history-header h3 { margin: 0; }
-.btn-clear {
-  background: transparent; color: var(--danger); border: none;
-  font-size: 13px; cursor: pointer; font-weight: 600; font-family: inherit;
-}
-.search {
-  width: 100%; padding: 10px 12px; border: 1px solid var(--border);
-  border-radius: 8px; margin-bottom: 12px; font-family: inherit; outline: none;
-}
-.search:focus { border-color: var(--gold); }
+// ---------- Tabs ----------
+tabLogin.addEventListener("click", () => {
+  tabLogin.classList.add("active"); tabSignup.classList.remove("active");
+  loginForm.classList.remove("hidden"); signupForm.classList.add("hidden");
+});
+tabSignup.addEventListener("click", () => {
+  tabSignup.classList.add("active"); tabLogin.classList.remove("active");
+  signupForm.classList.remove("hidden"); loginForm.classList.add("hidden");
+});
 
-.history-list { display: flex; flex-direction: column; gap: 16px; }
-.empty { text-align: center; color: var(--muted); padding: 20px; font-size: 14px; }
+// ---------- Auth ----------
+signupForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  signupError.textContent = "";
+  const name = document.getElementById("signupName").value.trim();
+  const email = document.getElementById("signupEmail").value.trim();
+  const pass = document.getElementById("signupPassword").value;
+  const confirm = document.getElementById("signupConfirm").value;
+  if (pass !== confirm) { signupError.textContent = "Passwords do not match"; return; }
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(cred.user, { displayName: name });
+  } catch (err) { signupError.textContent = err.message.replace("Firebase: ",""); }
+});
 
-.group-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 12px; background: #faf7ef; border-radius: 8px;
-  font-size: 12px; font-weight: 600; color: var(--navy);
-  margin-bottom: 8px;
-}
-.group-header .total {
-  background: #fff3d6; padding: 4px 10px; border-radius: 12px;
-  color: var(--gold-dark); font-size: 11px;
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginError.textContent = "";
+  const email = document.getElementById("loginEmail").value.trim();
+  const pass = document.getElementById("loginPassword").value;
+  try { await signInWithEmailAndPassword(auth, email, pass); }
+  catch (err) { loginError.textContent = err.message.replace("Firebase: ",""); }
+});
+
+logoutBtn.addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = user;
+    authScreen.classList.add("hidden");
+    app.classList.remove("hidden");
+    userNameEl.textContent = user.displayName || user.email.split("@")[0];
+    loadExpenses();
+  } else {
+    currentUser = null;
+    app.classList.add("hidden");
+    authScreen.classList.remove("hidden");
+    allExpenses = [];
+  }
+});
+
+// ---------- Expenses ----------
+expenseForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!currentUser) return;
+  const name = expenseName.value.trim();
+  const amount = parseFloat(expenseAmount.value);
+  if (!name || isNaN(amount) || amount < 0) return;
+  try {
+    await addDoc(collection(db, "expenses"), {
+      userId: currentUser.uid,
+      name, amount,
+      currency: currencyEl.value,
+      createdAt: serverTimestamp(),
+      timestamp: Date.now(),
+    });
+    expenseName.value = ""; expenseAmount.value = "";
+    loadExpenses();
+  } catch (err) { alert("Failed to add: " + err.message); }
+});
+
+async function loadExpenses() {
+  if (!currentUser) return;
+  try {
+    const q = query(
+      collection(db, "expenses"),
+      where("userId", "==", currentUser.uid)
+    );
+    const snap = await getDocs(q);
+    allExpenses = [];
+    snap.forEach((d) => allExpenses.push({ id: d.id, ...d.data() }));
+    allExpenses.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    render();
+  } catch (err) { console.error(err); }
 }
 
-.expense-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 8px; border-bottom: 1px solid var(--border);
-}
-.expense-item:last-child { border-bottom: none; }
-.exp-num {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  color: #fff; display:flex; align-items:center; justify-content:center;
-  font-weight: 600; font-size: 13px;
-}
-.exp-info { flex: 1; }
-.exp-info .name { font-weight: 600; font-size: 14px; color: var(--navy); }
-.exp-info .time { font-size: 11px; color: var(--muted); }
-.exp-amount { font-weight: 600; color: var(--navy); font-size: 14px; }
-.exp-del {
-  background: #ffe9e9; color: var(--danger); border: none;
-  width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+function isSameDay(t, ref) {
+  const a = new Date(t), b = new Date(ref);
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
 }
 
-@media (max-width: 480px) {
-  .summary-left h2 { font-size: 22px; }
-  .field { min-width: 100%; }
+function render() {
+  const search = searchInput.value.trim().toLowerCase();
+  const filtered = allExpenses.filter((e) => e.name.toLowerCase().includes(search));
+
+  const now = Date.now();
+  const yesterday = now - 86400000;
+
+  // Today's totals (only today's)
+  const todays = allExpenses.filter((e) => isSameDay(e.timestamp, now));
+  const todayTotal = todays.reduce((s, e) => s + (e.amount || 0), 0);
+  const cur = todays[0]?.currency || "₹";
+  todayTotalEl.textContent = `${cur} ${todayTotal.toFixed(2)}`;
+  todayCountEl.textContent = todays.length;
+
+  // Group
+  const groups = { Today: [], Yesterday: [], Older: {} };
+  filtered.forEach((e) => {
+    if (isSameDay(e.timestamp, now)) groups.Today.push(e);
+    else if (isSameDay(e.timestamp, yesterday)) groups.Yesterday.push(e);
+    else {
+      const d = new Date(e.timestamp);
+      const key = d.toDateString();
+      (groups.Older[key] = groups.Older[key] || []).push(e);
+    }
+  });
+
+  historyList.innerHTML = "";
+  if (filtered.length === 0) {
+    historyList.innerHTML = `<p class="empty">No expenses found.</p>`;
+    return;
+  }
+
+  if (groups.Today.length) historyList.appendChild(buildGroup("TODAY", groups.Today));
+  if (groups.Yesterday.length) historyList.appendChild(buildGroup("YESTERDAY", groups.Yesterday));
+  Object.keys(groups.Older).forEach((k) => {
+    historyList.appendChild(buildGroup(formatDate(k), groups.Older[k]));
+  });
 }
+
+function formatDate(ds) {
+  const d = new Date(ds);
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${String(d.getDate()).padStart(2,"0")} ${months[d.getMonth()]} ${d.getFullYear()}`.toUpperCase();
+}
+
+function buildGroup(title, items) {
+  const wrap = document.createElement("div");
+  const total = items.reduce((s, e) => s + (e.amount || 0), 0);
+  const cur = items[0]?.currency || "₹";
+  const subtitle = title === "TODAY" || title === "YESTERDAY"
+    ? `${title} • ${new Date(items[0].timestamp).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" })}`
+    : title;
+
+  wrap.innerHTML = `
+    <div class="group-header">
+      <span>${subtitle}</span>
+      <span class="total">Total: ${cur} ${total.toFixed(2)} • ${items.length} ${items.length===1?"Expense":"Expenses"}</span>
+    </div>
+  `;
+  items.forEach((e, i) => {
+    const row = document.createElement("div");
+    row.className = "expense-item";
+    const t = new Date(e.timestamp);
+    const tstr = t.toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit" });
+    row.innerHTML = `
+      <div class="exp-num">${i+1}</div>
+      <div class="exp-info">
+        <div class="name">${escapeHtml(e.name)}</div>
+        <div class="time">${tstr}</div>
+      </div>
+      <div class="exp-amount">${e.currency || "₹"} ${Number(e.amount).toFixed(2)}</div>
+      <button class="exp-del" data-id="${e.id}"><i class="fas fa-trash"></i></button>
+    `;
+    row.querySelector(".exp-del").addEventListener("click", () => deleteExpense(e.id));
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[c]));
+}
+
+async function deleteExpense(id) {
+  if (!confirm("Delete this expense?")) return;
+  try { await deleteDoc(doc(db, "expenses", id)); loadExpenses(); }
+  catch (err) { alert("Failed: " + err.message); }
+}
+
+clearAllBtn.addEventListener("click", async () => {
+  if (!currentUser) return;
+  if (!confirm("Delete ALL your expenses? This cannot be undone.")) return;
+  try {
+    const q = query(collection(db, "expenses"), where("userId", "==", currentUser.uid));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    loadExpenses();
+  } catch (err) { alert("Failed: " + err.message); }
+});
+
+searchInput.addEventListener("input", render);
