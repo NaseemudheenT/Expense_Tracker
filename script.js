@@ -18,6 +18,7 @@ import {
 let user = null;
 let expenses = [];       // { id, name, amount, currency, date, time, ts }
 let calY, calM;
+let addingExpense = false;
 let dark = localStorage.getItem("et_dark") === "1";
 
 const now = new Date();
@@ -159,16 +160,33 @@ async function loadExpenses() {
   }
 }
 
-window.doAddExpense = async function() {
-  const name   = qs("#expName").value.trim();
-  const amount = parseFloat(qs("#expAmt").value);
-  const cur    = qs("#curSel").value;
+window.doAddExpense = async function(event) {
+  if (event?.preventDefault) event.preventDefault();
+  if (addingExpense) return;
+
+  const nameEl = qs("#expName");
+  const amtEl  = qs("#expAmt");
+  const curEl  = qs("#curSel");
   const errEl  = qs("#addErr");
-  errEl.textContent = "";
+  const name   = nameEl?.value.trim() || "";
+  const amount = parseFloat(amtEl?.value || "");
+  const cur    = curEl?.value || "₹";
 
-  if (!name)                    { errEl.textContent = "Enter an expense name."; return; }
-  if (isNaN(amount)||amount < 0){ errEl.textContent = "Enter a valid amount."; return; }
+  if (errEl) errEl.textContent = "";
+  if (!user) {
+    if (errEl) errEl.textContent = "Please sign in before adding expenses.";
+    return;
+  }
+  if (!name) {
+    if (errEl) errEl.textContent = "Enter an expense name.";
+    return;
+  }
+  if (isNaN(amount) || amount <= 0) {
+    if (errEl) errEl.textContent = "Enter a valid amount.";
+    return;
+  }
 
+  addingExpense = true;
   qs("#addBtnTxt").classList.add("hide");
   qs("#addSpin").classList.remove("hide");
   qs("#addBtn").disabled = true;
@@ -187,18 +205,19 @@ window.doAddExpense = async function() {
     };
     const ref = await addDoc(collection(db, "expenses"), exp);
     expenses.unshift({ id: ref.id, ...exp });
-    qs("#expName").value = "";
-    qs("#expAmt").value  = "";
+    if (nameEl) nameEl.value = "";
+    if (amtEl)  amtEl.value  = "";
     refresh();
     toast("Expense added ✓");
   } catch(e) {
     console.error(e);
-    errEl.textContent = "Failed to add. Please try again.";
+    if (errEl) errEl.textContent = "Failed to add. Please try again.";
+  } finally {
+    addingExpense = false;
+    qs("#addBtnTxt").classList.remove("hide");
+    qs("#addSpin").classList.add("hide");
+    qs("#addBtn").disabled = false;
   }
-
-  qs("#addBtnTxt").classList.remove("hide");
-  qs("#addSpin").classList.add("hide");
-  qs("#addBtn").disabled = false;
 };
 
 window.doDeleteExpense = async function(id) {
