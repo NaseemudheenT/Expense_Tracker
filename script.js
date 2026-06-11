@@ -20,7 +20,7 @@ function qs(sel) {
 }
 
 function fmtDate(d) { 
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; 
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; 
 }
 
 function fmtTime(d) {
@@ -107,7 +107,7 @@ function bootApp() {
     showApp();
     goView("home");
     loadExpenses();
-  } catch(e) {
+  } catch (e) {
     console.error("bootApp error:", e);
     toast("Error loading app");
   }
@@ -165,7 +165,7 @@ window.doLogin = async function() {
   setAuthLoading("l", true);
   try {
     await signInWithEmailAndPassword(auth, email, pass);
-  } catch(e) { 
+  } catch (e) { 
     if (lErr) lErr.textContent = authMsg(e.code); 
   }
   setAuthLoading("l", false);
@@ -204,7 +204,7 @@ window.doSignup = async function() {
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     await updateProfile(cred.user, { displayName: name });
-  } catch(e) { 
+  } catch (e) { 
     if (sErr) sErr.textContent = authMsg(e.code); 
   }
   setAuthLoading("s", false);
@@ -273,7 +273,7 @@ async function loadExpenses() {
       };
     });
     refresh();
-  } catch(e) {
+  } catch (e) {
     console.error("loadExpenses error:", e);
     toast("Failed to load expenses");
   }
@@ -339,7 +339,7 @@ window.doAddExpense = async function(event) {
     
     refresh();
     toast("Expense added ✓");
-  } catch(e) {
+  } catch (e) {
     console.error("doAddExpense error:", e);
     if (addErr) addErr.textContent = "Failed to add. Please try again.";
   } finally {
@@ -361,7 +361,7 @@ window.doDeleteExpense = async function(expenseId) {
     expenses = expenses.filter(e => e.id !== expenseId);
     refresh();
     toast("Expense deleted ✓");
-  } catch(e) { 
+  } catch (e) { 
     console.error("doDeleteExpense error:", e);
     toast("Failed to delete expense"); 
   } finally {
@@ -384,7 +384,7 @@ window.doClearAll = async function() {
     expenses = [];
     refresh();
     toast("All expenses cleared ✓");
-  } catch(e) { 
+  } catch (e) { 
     console.error("doClearAll error:", e);
     toast("Failed to clear expenses"); 
   }
