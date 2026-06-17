@@ -2,111 +2,531 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Expence Tracker</title>
-  <meta name="description" content="Track your daily expenses easily and securely." />
-  <link rel="icon" href="logo.png" />
+  <meta name="description" content="Track your daily expenses with ease. A beautiful, secure expense tracker." />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- App Styles -->
   <link rel="stylesheet" href="styles.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
-<body>
-  <!-- AUTH SCREEN -->
-  <section id="authScreen" class="auth-screen">
+<body class="light-mode">
+
+<!-- ══════════════════════════════════════════════
+     SPLASH / LOADING SCREEN
+══════════════════════════════════════════════ -->
+<div id="splash" class="splash">
+  <div class="splash-inner">
+    <img src="logo.png" alt="Expence Tracker" class="splash-logo" />
+    <div class="splash-title">EXPENCE</div>
+    <div class="splash-sub">— TRACKER —</div>
+    <div class="splash-spinner">
+      <div class="spinner-ring"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     AUTH SCREEN (Login / Signup)
+══════════════════════════════════════════════ -->
+<div id="authScreen" class="auth-screen d-none">
+  <div class="auth-wrapper">
+
+    <!-- Brand -->
+    <div class="auth-brand">
+      <img src="logo.png" alt="Logo" class="auth-logo-img" />
+      <div class="auth-brand-name">
+        <span class="brand-expence">EXPENCE</span>
+        <span class="brand-tracker">— TRACKER —</span>
+      </div>
+    </div>
+
+    <!-- Card -->
     <div class="auth-card">
-      <img src="logo.png" alt="Expence Tracker" class="auth-logo" />
+
+      <!-- Tab Switch -->
       <div class="auth-tabs">
-        <button id="tabLogin" class="auth-tab active">Login</button>
-        <button id="tabSignup" class="auth-tab">Sign Up</button>
+        <button id="tabLoginBtn" class="auth-tab auth-tab--active" onclick="showAuthTab('login')">Login</button>
+        <button id="tabSignupBtn" class="auth-tab" onclick="showAuthTab('signup')">Sign Up</button>
       </div>
 
-      <form id="loginForm" class="auth-form">
-        <input type="email" id="loginEmail" placeholder="Email" required />
-        <input type="password" id="loginPassword" placeholder="Password" required />
-        <button type="submit" class="btn-primary">Login</button>
-        <p id="loginError" class="form-error"></p>
-      </form>
+      <!-- ── LOGIN FORM ── -->
+      <div id="loginForm" class="auth-form">
+        <h2 class="auth-form-title">Welcome Back 👋</h2>
+        <p class="auth-form-desc">Sign in to continue tracking</p>
 
-      <form id="signupForm" class="auth-form hidden">
-        <input type="text" id="signupName" placeholder="Full Name" required />
-        <input type="email" id="signupEmail" placeholder="Email" required />
-        <input type="password" id="signupPassword" placeholder="Password (min 6 chars)" required minlength="6" />
-        <input type="password" id="signupConfirm" placeholder="Confirm Password" required minlength="6" />
-        <button type="submit" class="btn-primary">Create Account</button>
-        <p id="signupError" class="form-error"></p>
-      </form>
+        <div class="form-field">
+          <label class="field-label">Email Address</label>
+          <div class="field-input-wrap">
+            <i class="fas fa-envelope field-icon"></i>
+            <input
+              type="email"
+              id="loginEmail"
+              class="field-input"
+              placeholder="Enter your email"
+              autocomplete="email"
+            />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="field-label">Password</label>
+          <div class="field-input-wrap">
+            <i class="fas fa-lock field-icon"></i>
+            <input
+              type="password"
+              id="loginPassword"
+              class="field-input"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              onkeydown="if(event.key==='Enter') handleLogin()"
+            />
+            <button type="button" class="toggle-pw-btn" onclick="togglePasswordVisibility('loginPassword', this)">
+              <i class="fas fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="loginError" class="form-error"></div>
+
+        <button id="loginBtn" class="btn-primary btn-full" onclick="handleLogin()">
+          <span id="loginBtnText"><i class="fas fa-sign-in-alt"></i>&nbsp; Login</span>
+          <span id="loginBtnSpinner" class="btn-spinner d-none"></span>
+        </button>
+      </div>
+
+      <!-- ── SIGNUP FORM ── -->
+      <div id="signupForm" class="auth-form d-none">
+        <h2 class="auth-form-title">Create Account ✨</h2>
+        <p class="auth-form-desc">Start your expense journey today</p>
+
+        <div class="form-field">
+          <label class="field-label">Full Name</label>
+          <div class="field-input-wrap">
+            <i class="fas fa-user field-icon"></i>
+            <input
+              type="text"
+              id="signupName"
+              class="field-input"
+              placeholder="Enter your full name"
+              autocomplete="name"
+            />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="field-label">Email Address</label>
+          <div class="field-input-wrap">
+            <i class="fas fa-envelope field-icon"></i>
+            <input
+              type="email"
+              id="signupEmail"
+              class="field-input"
+              placeholder="Enter your email"
+              autocomplete="email"
+            />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="field-label">Password</label>
+          <div class="field-input-wrap">
+            <i class="fas fa-lock field-icon"></i>
+            <input
+              type="password"
+              id="signupPassword"
+              class="field-input"
+              placeholder="Minimum 6 characters"
+              autocomplete="new-password"
+            />
+            <button type="button" class="toggle-pw-btn" onclick="togglePasswordVisibility('signupPassword', this)">
+              <i class="fas fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="field-label">Confirm Password</label>
+          <div class="field-input-wrap">
+            <i class="fas fa-lock field-icon"></i>
+            <input
+              type="password"
+              id="signupConfirm"
+              class="field-input"
+              placeholder="Re-enter your password"
+              autocomplete="new-password"
+              onkeydown="if(event.key==='Enter') handleSignup()"
+            />
+            <button type="button" class="toggle-pw-btn" onclick="togglePasswordVisibility('signupConfirm', this)">
+              <i class="fas fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="signupError" class="form-error"></div>
+
+        <button id="signupBtn" class="btn-primary btn-full" onclick="handleSignup()">
+          <span id="signupBtnText"><i class="fas fa-user-plus"></i>&nbsp; Create Account</span>
+          <span id="signupBtnSpinner" class="btn-spinner d-none"></span>
+        </button>
+      </div>
+
+    </div><!-- /auth-card -->
+  </div><!-- /auth-wrapper -->
+</div><!-- /authScreen -->
+
+
+<!-- ══════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════ -->
+<div id="appScreen" class="app-screen d-none">
+
+  <!-- ── SIDEBAR OVERLAY ── -->
+  <div id="sidebarOverlay" class="sidebar-overlay d-none" onclick="closeSidebar()"></div>
+
+  <!-- ── SIDEBAR ── -->
+  <aside id="sidebar" class="sidebar sidebar--closed">
+    <div class="sb-header">
+      <div class="sb-avatar">
+        <i class="fas fa-user"></i>
+      </div>
+      <div class="sb-user-info">
+        <p id="sbUserName" class="sb-user-name">Loading...</p>
+        <p id="sbUserEmail" class="sb-user-email">...</p>
+      </div>
     </div>
-  </section>
 
-  <!-- APP -->
-  <main id="app" class="app hidden">
-    <header class="app-header">
-      <button class="icon-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
-      <div class="brand">
-        <img src="logo.png" alt="logo" />
-        <div>
-          <h1>EXPENCE</h1>
-          <span>TRACKER</span>
+    <nav class="sb-nav">
+      <button class="sb-nav-item sb-nav-item--active" onclick="navigateTo('home'); closeSidebar();">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+      </button>
+      <button class="sb-nav-item" onclick="navigateTo('stats'); closeSidebar();">
+        <i class="fas fa-chart-bar"></i>
+        <span>Stats</span>
+      </button>
+      <button class="sb-nav-item" onclick="navigateTo('calendar'); closeSidebar();">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Calendar</span>
+      </button>
+      <button class="sb-nav-item" onclick="navigateTo('settings'); closeSidebar();">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <button class="sb-logout-btn" onclick="handleLogout()">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>Logout</span>
+    </button>
+  </aside>
+
+  <!-- ── APP HEADER ── -->
+  <header class="app-header">
+    <button class="hdr-icon-btn" id="menuBtn" onclick="openSidebar()" aria-label="Menu">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="hdr-brand">
+      <img src="logo.png" alt="Logo" class="hdr-logo" />
+      <div class="hdr-title-wrap">
+        <span class="hdr-title-main">EXPENCE</span>
+        <span class="hdr-title-sub">— TRACKER —</span>
+      </div>
+    </div>
+
+    <button class="hdr-icon-btn hdr-theme-btn" id="themeBtn" onclick="toggleDarkMode()" aria-label="Toggle theme">
+      <i class="fas fa-moon" id="themeIcon"></i>
+    </button>
+  </header>
+
+  <!-- ── PAGES WRAPPER ── -->
+  <div class="pages-wrapper">
+
+    <!-- ════════ HOME PAGE ════════ -->
+    <div id="homePage" class="page page--active">
+
+      <!-- TODAY'S SUMMARY CARD -->
+      <div class="summary-card">
+        <div class="summary-left">
+          <p class="summary-label">TODAY'S EXPENSES</p>
+          <h2 class="summary-amount" id="todayTotal">₹ 0.00</h2>
+          <p class="summary-count">
+            <i class="fas fa-wallet"></i>
+            <span id="todayCount">0</span> Expenses Today
+          </p>
+        </div>
+        <div class="summary-right">
+          <i class="fas fa-calendar-alt summary-cal-icon"></i>
+          <p class="summary-date" id="summaryDate"></p>
+          <p class="summary-weekday" id="summaryWeekday"></p>
         </div>
       </div>
-      <button class="icon-btn" id="logoutBtn" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
-    </header>
 
-    <p class="welcome">Welcome, <span id="userName">User</span> 👋</p>
-
-    <!-- Today's summary -->
-    <section class="summary-card">
-      <div class="summary-left">
-        <p class="label">TODAY'S EXPENSES</p>
-        <h2 id="todayTotal">₹ 0.00</h2>
-        <p class="sub"><i class="fas fa-wallet"></i> <span id="todayCount">0</span> Expenses Today</p>
+      <!-- ADD NEW EXPENSE CARD -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <i class="fas fa-pen-to-square header-icon"></i>
+          <span>ADD NEW EXPENSE</span>
+        </div>
+        <div class="add-expense-grid">
+          <div class="add-field">
+            <label class="add-label">Currency</label>
+            <div class="custom-select-wrap">
+              <select id="expCurrency" class="add-input add-select" onchange="updateCurrencyBadge()">
+                <option value="₹">₹ INR</option>
+                <option value="$">$ USD</option>
+                <option value="€">€ EUR</option>
+                <option value="£">£ GBP</option>
+                <option value="¥">¥ JPY</option>
+                <option value="₩">₩ KRW</option>
+                <option value="A$">A$ AUD</option>
+                <option value="C$">C$ CAD</option>
+                <option value="د.إ">د.إ AED</option>
+                <option value="₺">₺ TRY</option>
+                <option value="R$">R$ BRL</option>
+                <option value="SGD">SGD</option>
+              </select>
+              <i class="fas fa-chevron-down select-arrow"></i>
+            </div>
+          </div>
+          <div class="add-field add-field--grow">
+            <label class="add-label">Expense Name</label>
+            <input
+              type="text"
+              id="expName"
+              class="add-input"
+              placeholder="Enter expense name"
+              onkeydown="if(event.key==='Enter') handleAddExpense()"
+            />
+          </div>
+          <div class="add-field">
+            <label class="add-label">Amount</label>
+            <div class="amount-input-wrap">
+              <input
+                type="number"
+                id="expAmount"
+                class="add-input add-input--amount"
+                placeholder="Enter amount"
+                min="0"
+                step="0.01"
+                onkeydown="if(event.key==='Enter') handleAddExpense()"
+              />
+              <span id="currencyBadge" class="currency-badge">₹</span>
+            </div>
+          </div>
+        </div>
+        <div id="addExpenseError" class="form-error add-form-error"></div>
+        <button id="addExpenseBtn" class="btn-primary btn-full btn-add-expense" onclick="handleAddExpense()">
+          <span id="addBtnText"><i class="fas fa-plus"></i>&nbsp; Add Expense</span>
+          <span id="addBtnSpinner" class="btn-spinner d-none"></span>
+        </button>
       </div>
-      <div class="summary-right">
-        <i class="far fa-calendar-alt"></i>
-        <p id="todayDate">--</p>
-        <span id="todayDay">--</span>
-      </div>
-    </section>
 
-    <!-- Add expense -->
-    <section class="card">
-      <h3><i class="far fa-edit"></i> ADD NEW EXPENSE</h3>
-      <form id="expenseForm" class="expense-form">
-        <div class="field">
-          <label>Currency</label>
-          <select id="currency">
+      <!-- EXPENSE HISTORY -->
+      <div class="history-header-row">
+        <div class="section-card-header">
+          <i class="fas fa-clock-rotate-left header-icon"></i>
+          <span>EXPENSE HISTORY</span>
+        </div>
+        <button class="clear-all-btn" onclick="handleClearAll()">
+          <i class="fas fa-trash-can"></i>
+          <span>Clear All</span>
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <i class="fas fa-magnifying-glass search-icon"></i>
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="Search expenses..."
+          oninput="renderHistory()"
+        />
+      </div>
+
+      <!-- History List -->
+      <div id="historyContainer" class="history-container">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div><!-- /homePage -->
+
+    <!-- ════════ STATS PAGE ════════ -->
+    <div id="statsPage" class="page">
+      <h2 class="page-title">Statistics</h2>
+
+      <div class="stats-cards-grid" id="statsCardsGrid">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="section-card mt-16">
+        <div class="section-card-header">
+          <i class="fas fa-chart-column header-icon"></i>
+          <span>LAST 7 DAYS</span>
+        </div>
+        <div id="barChart" class="bar-chart-wrap">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <div class="section-card mt-16">
+        <div class="section-card-header">
+          <i class="fas fa-trophy header-icon"></i>
+          <span>TOP EXPENSES</span>
+        </div>
+        <div id="topExpenses">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </div><!-- /statsPage -->
+
+    <!-- ════════ CALENDAR PAGE ════════ -->
+    <div id="calendarPage" class="page">
+      <h2 class="page-title">Calendar</h2>
+
+      <div class="cal-nav-row">
+        <button class="cal-nav-btn" onclick="calendarChangeMonth(-1)">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <span id="calMonthLabel" class="cal-month-label"></span>
+        <button class="cal-nav-btn" onclick="calendarChangeMonth(1)">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="section-card">
+        <div id="calendarGrid" class="calendar-grid">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <div id="calDayDetail" class="section-card mt-12 d-none">
+        <!-- Rendered by JS -->
+      </div>
+    </div><!-- /calendarPage -->
+
+    <!-- ════════ SETTINGS PAGE ════════ -->
+    <div id="settingsPage" class="page">
+      <h2 class="page-title">Settings</h2>
+
+      <div class="section-card settings-card">
+        <!-- User Info -->
+        <div class="settings-user-row">
+          <div class="settings-avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="settings-user-info">
+            <p id="settingsUserName" class="settings-name"></p>
+            <p id="settingsUserEmail" class="settings-email"></p>
+          </div>
+        </div>
+
+        <!-- Dark Mode -->
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <i class="fas fa-moon settings-row-icon"></i>
+            <span>Dark Mode</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="darkModeToggle" onchange="handleDarkToggle()" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Default Currency -->
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <i class="fas fa-coins settings-row-icon"></i>
+            <span>Default Currency</span>
+          </div>
+          <select id="defaultCurrencySelect" class="settings-select" onchange="saveDefaultCurrency()">
             <option value="₹">₹ INR</option>
             <option value="$">$ USD</option>
             <option value="€">€ EUR</option>
             <option value="£">£ GBP</option>
+            <option value="¥">¥ JPY</option>
+            <option value="₩">₩ KRW</option>
+            <option value="A$">A$ AUD</option>
+            <option value="C$">C$ CAD</option>
           </select>
         </div>
-        <div class="field grow">
-          <label>Expense Name</label>
-          <input type="text" id="expenseName" placeholder="Enter expense name" required />
-        </div>
-        <div class="field">
-          <label>Amount</label>
-          <input type="number" id="expenseAmount" placeholder="Enter amount" min="0" step="0.01" required />
-        </div>
-        <button type="submit" class="btn-primary full"><i class="fas fa-plus"></i> Add Expense</button>
-      </form>
-    </section>
 
-    <!-- History -->
-    <section class="card">
-      <div class="history-header">
-        <h3><i class="fas fa-list"></i> EXPENSE HISTORY</h3>
-        <button id="clearAllBtn" class="btn-clear"><i class="fas fa-trash"></i> Clear All</button>
-      </div>
-      <input type="text" id="searchInput" class="search" placeholder="🔍 Search expenses..." />
-      <div id="historyList" class="history-list">
-        <p class="empty">No expenses yet. Add your first one!</p>
-      </div>
-    </section>
-  </main>
+        <!-- Notifications -->
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <i class="fas fa-bell settings-row-icon"></i>
+            <span>App Version</span>
+          </div>
+          <span class="settings-row-value">v2.0.0</span>
+        </div>
 
-  <script type="module" src="firebase.js"></script>
-  <script type="module" src="script.js"></script>
+        <!-- Logout -->
+        <div class="settings-logout-wrap">
+          <button class="btn-logout-full" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i>
+            &nbsp;Logout
+          </button>
+        </div>
+      </div>
+    </div><!-- /settingsPage -->
+
+  </div><!-- /pages-wrapper -->
+
+  <!-- ── BOTTOM NAVIGATION ── -->
+  <nav class="bottom-nav">
+    <button id="navHome" class="nav-btn nav-btn--active" onclick="navigateTo('home')">
+      <i class="fas fa-house"></i>
+      <span>Home</span>
+    </button>
+    <button id="navStats" class="nav-btn" onclick="navigateTo('stats')">
+      <i class="fas fa-chart-bar"></i>
+      <span>Stats</span>
+    </button>
+    <button class="nav-fab" onclick="scrollToAddExpense()" aria-label="Add Expense">
+      <i class="fas fa-plus"></i>
+    </button>
+    <button id="navCalendar" class="nav-btn" onclick="navigateTo('calendar')">
+      <i class="fas fa-calendar-alt"></i>
+      <span>Calendar</span>
+    </button>
+    <button id="navSettings" class="nav-btn" onclick="navigateTo('settings')">
+      <i class="fas fa-gear"></i>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+</div><!-- /appScreen -->
+
+<!-- ══════════════════════════════════════════════
+     TOAST NOTIFICATION
+══════════════════════════════════════════════ -->
+<div id="toast" class="toast d-none"></div>
+
+<!-- ══════════════════════════════════════════════
+     CONFIRMATION MODAL
+══════════════════════════════════════════════ -->
+<div id="confirmModal" class="modal-overlay d-none">
+  <div class="modal-box">
+    <div class="modal-icon">
+      <i class="fas fa-triangle-exclamation"></i>
+    </div>
+    <h3 id="modalTitle" class="modal-title">Are you sure?</h3>
+    <p id="modalMessage" class="modal-message">This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn--cancel" onclick="closeConfirmModal()">Cancel</button>
+      <button class="modal-btn modal-btn--confirm" id="modalConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="script.js"></script>
 </body>
 </html>
