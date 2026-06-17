@@ -1,128 +1,228 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Expense Tracker — Luxury</title>
-  <link rel="icon" href="logo.png" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Expence Tracker — Smart Daily Expense Manager</title>
+  <meta name="description" content="A premium, secure expense tracker. Log daily spending, view history and stay on top of your money." />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="logo.png" alt="logo" class="logo" />
-      <h1>Expense Tracker</h1>
-    </div>
-    <div id="user-area" class="user-area">
-      <div id="user-name" class="user-name"></div>
-      <button id="btn-logout" class="btn btn-ghost">Logout</button>
-    </div>
-  </header>
 
-  <main class="container">
-    <section id="auth-section" class="card auth-card">
-      <div class="tabs">
-        <button id="show-login" class="tab active">Login</button>
-        <button id="show-signup" class="tab">Sign up</button>
+  <!-- ================= TOAST CONTAINER ================= -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- ================= AUTH SCREEN ================= -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="brand">
+        <img src="logo.png" alt="Expence Tracker logo" class="brand-logo" />
+        <h1 class="brand-title">EXPENCE <span>TRACKER</span></h1>
       </div>
-      <div id="auth-forms">
-        <form id="login-form" class="form">
-          <label>Email<input type="email" id="login-email" required/></label>
-          <label>Password<input type="password" id="login-password" required/></label>
-          <div class="form-actions">
-            <button type="submit" class="btn">Login</button>
-          </div>
-          <div id="login-error" class="form-error"></div>
-        </form>
 
-        <form id="signup-form" class="form hidden">
-          <label>Full Name<input type="text" id="signup-name" required/></label>
-          <label>Email<input type="email" id="signup-email" required/></label>
-          <label>Password<input type="password" id="signup-password" required minlength="6"/></label>
-          <label>Confirm Password<input type="password" id="signup-password-confirm" required minlength="6"/></label>
-          <div class="form-actions">
-            <button type="submit" class="btn">Create account</button>
-          </div>
-          <div id="signup-error" class="form-error"></div>
-        </form>
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tabLogin">Log In</button>
+        <button type="button" class="auth-tab" id="tabSignup">Sign Up</button>
       </div>
-    </section>
 
-    <section id="app" class="hidden">
-      <div class="grid">
-        <aside class="card sidebar">
-          <div class="profile">
-            <img src="logo.png" alt="avatar"/>
-            <div>
-              <div id="profile-name" class="profile-name"></div>
-              <div id="profile-email" class="profile-email"></div>
-            </div>
-          </div>
+      <p id="authError" class="auth-error hidden"></p>
 
-          <div class="stats card mini">
-            <h3>Today</h3>
-            <div class="stat-row">
-              <div>
-                <div class="muted">Total</div>
-                <div id="today-total" class="big">$0.00</div>
-              </div>
-              <div>
-                <div class="muted">Count</div>
-                <div id="today-count" class="big">0</div>
-              </div>
-            </div>
-          </div>
+      <!-- LOGIN FORM -->
+      <form id="loginForm" class="auth-form" novalidate>
+        <label class="field-label" for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" class="field-input" placeholder="you@example.com" autocomplete="email" required />
 
-          <div class="actions">
-            <button id="backup-btn" class="btn btn-outline">Backup Data</button>
-            <button id="restore-btn" class="btn btn-outline">Restore Backup</button>
-            <button id="clear-all-btn" class="btn btn-danger">Clear All Expenses</button>
-          </div>
-        </aside>
+        <label class="field-label" for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" class="field-input" placeholder="Enter your password" autocomplete="current-password" required />
 
-        <section class="main-card">
-          <div class="card">
-            <h2>Add Expense</h2>
-            <form id="expense-form" class="form-inline">
-              <input id="expense-name" placeholder="Expense name" required />
-              <input id="expense-amount" placeholder="Amount" type="number" step="0.01" min="0.01" required />
-              <select id="expense-currency">
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="INR">INR</option>
+        <button type="submit" class="btn-gold" id="loginBtn">
+          <span class="btn-label">Log In</span>
+          <span class="btn-spinner hidden"></span>
+        </button>
+
+        <p class="auth-switch">Don't have an account? <a href="#" id="goToSignup">Sign up</a></p>
+      </form>
+
+      <!-- SIGNUP FORM -->
+      <form id="signupForm" class="auth-form hidden" novalidate>
+        <label class="field-label" for="signupName">Full Name</label>
+        <input type="text" id="signupName" class="field-input" placeholder="Your full name" autocomplete="name" required />
+
+        <label class="field-label" for="signupEmail">Email</label>
+        <input type="email" id="signupEmail" class="field-input" placeholder="you@example.com" autocomplete="email" required />
+
+        <label class="field-label" for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" class="field-input" placeholder="At least 6 characters" autocomplete="new-password" required />
+
+        <label class="field-label" for="signupConfirm">Confirm Password</label>
+        <input type="password" id="signupConfirm" class="field-input" placeholder="Re-enter password" autocomplete="new-password" required />
+
+        <button type="submit" class="btn-gold" id="signupBtn">
+          <span class="btn-label">Create Account</span>
+          <span class="btn-spinner hidden"></span>
+        </button>
+
+        <p class="auth-switch">Already have an account? <a href="#" id="goToLogin">Log in</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= APP SCREEN ================= -->
+  <div id="appScreen" class="app-screen hidden">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="topbar-brand">
+        <img src="logo.png" alt="Expence Tracker logo" class="topbar-logo" />
+        <div class="topbar-titles">
+          <span class="topbar-title">EXPENCE</span>
+          <span class="topbar-subtitle">— TRACKER —</span>
+        </div>
+      </div>
+      <button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode">
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </button>
+    </header>
+
+    <!-- SIDEBAR -->
+    <div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-avatar" id="sidebarAvatar">U</div>
+        <div>
+          <p class="sidebar-name" id="sidebarName">User</p>
+          <p class="sidebar-email" id="sidebarEmail">user@example.com</p>
+        </div>
+      </div>
+      <button class="sidebar-link" id="sidebarTheme">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        Toggle Dark Mode
+      </button>
+      <button class="sidebar-link" id="sidebarExport">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Backup / Export Data
+      </button>
+      <button class="sidebar-link danger" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14 4-4-4-4m4 4H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Log Out
+      </button>
+      <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">&times;</button>
+    </aside>
+
+    <main class="container">
+
+      <!-- TODAY'S EXPENSES CARD -->
+      <section class="today-card">
+        <div class="today-info">
+          <p class="today-label">TODAY'S EXPENSES</p>
+          <p class="today-amount" id="todayAmount">₹ 0.00</p>
+          <p class="today-count" id="todayCount">
+            <svg viewBox="0 0 24 24" fill="none" class="bag-icon"><path d="M6 7h12l1 13H5L6 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 7a3 3 0 1 1 6 0" stroke="currentColor" stroke-width="1.6"/></svg>
+            <span id="todayCountText">0 Expenses Today</span>
+          </p>
+        </div>
+        <div class="today-date">
+          <svg viewBox="0 0 24 24" fill="none" class="cal-icon"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span id="todayDateLine1">—</span>
+          <span id="todayDateLine2" class="today-weekday">—</span>
+        </div>
+      </section>
+
+      <!-- ADD EXPENSE CARD -->
+      <section class="card add-card">
+        <h2 class="card-heading">
+          <svg viewBox="0 0 24 24" fill="none" class="heading-icon"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          ADD NEW EXPENSE
+        </h2>
+        <form id="addExpenseForm" class="add-form" novalidate>
+          <div class="form-row">
+            <div class="form-group small">
+              <label class="field-label" for="expenseCurrency">Currency</label>
+              <select id="expenseCurrency" class="field-input">
+                <option value="INR" selected>₹ INR</option>
+                <option value="USD">$ USD</option>
+                <option value="EUR">€ EUR</option>
+                <option value="GBP">£ GBP</option>
               </select>
-              <button class="btn" id="add-expense">Add</button>
-            </form>
-            <div id="expense-error" class="form-error"></div>
-          </div>
-
-          <div class="card">
-            <h2>History</h2>
-            <div id="history">
-              <div class="section-group">
-                <h3>Today</h3>
-                <ul id="list-today" class="list"></ul>
-              </div>
-              <div class="section-group">
-                <h3>Yesterday</h3>
-                <ul id="list-yesterday" class="list"></ul>
-              </div>
-              <div class="section-group">
-                <h3>Older</h3>
-                <ul id="list-older" class="list"></ul>
-              </div>
+            </div>
+            <div class="form-group">
+              <label class="field-label" for="expenseName">Expense Name</label>
+              <input type="text" id="expenseName" class="field-input" placeholder="Enter expense name" maxlength="60" />
+            </div>
+            <div class="form-group">
+              <label class="field-label" for="expenseAmount">Amount</label>
+              <input type="number" id="expenseAmount" class="field-input" placeholder="Enter amount" min="0.01" step="0.01" inputmode="decimal" />
             </div>
           </div>
-        </section>
-      </div>
-    </section>
-  </main>
+          <p id="expenseError" class="form-error hidden"></p>
+          <button type="submit" class="btn-gold full" id="addExpenseBtn">
+            <span class="btn-label">+ Add Expense</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </form>
+      </section>
 
-  <footer class="footer">
-    <div>© <span id="brand-year"></span> Expense Tracker. Built with care.</div>
-    <div class="muted">White · Gold accents · Dark navy text</div>
-  </footer>
+      <!-- EXPENSE HISTORY -->
+      <section class="card history-card">
+        <div class="history-head">
+          <h2 class="card-heading">
+            <svg viewBox="0 0 24 24" fill="none" class="heading-icon"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            EXPENSE HISTORY
+          </h2>
+          <button class="clear-all-btn" id="clearAllBtn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Clear All
+          </button>
+        </div>
+        <div id="historyList" class="history-list">
+          <p class="empty-state" id="emptyState">No expenses yet. Add your first one above.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" id="navHome">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5M6 10v9a1 1 0 0 0 1 1h3v-5h4v5h3a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" id="navStats">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 21V10M12 21V4M19 21v-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Stats</span>
+      </button>
+      <button class="nav-fab" id="navAdd" aria-label="Add expense">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="nav-item" id="navCalendar">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Calendar</span>
+      </button>
+      <button class="nav-item" id="navSettings">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" stroke="currentColor" stroke-width="1.3"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ================= CONFIRM MODAL ================= -->
+  <div id="confirmModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h3 class="modal-title" id="confirmTitle">Are you sure?</h3>
+      <p class="modal-text" id="confirmText">This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-outline" id="confirmCancel">Cancel</button>
+        <button class="btn-danger" id="confirmOk">Delete</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="firebase.js"></script>
   <script type="module" src="script.js"></script>
