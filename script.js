@@ -1,4 +1,5 @@
-// script.js — Expence Tracker v2.0 — FIXED
+// script.js — Expence Tracker — Complete & Working
+
 import { auth, db } from "./firebase.js";
 import {
   createUserWithEmailAndPassword,
@@ -20,757 +21,650 @@ import {
   Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ─────────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────────
-let currentUser   = null;
-let allExpenses   = [];
-let calYear       = new Date().getFullYear();
-let calMonth      = new Date().getMonth();
-let isDarkMode    = localStorage.getItem("et_dark") === "true";
-let currentPage   = "home";
-let modalCallback = null;
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let USER      = null;   // Firebase auth user
+let EXPENSES  = [];     // [{id, uid, name, amount, currency, date, time, timestamp}, ...]
+let CAL_YEAR  = new Date().getFullYear();
+let CAL_MONTH = new Date().getMonth();
+let DARK      = localStorage.getItem("dark") === "1";
+let PAGE      = "home";
+let MODAL_CB  = null;   // callback for confirm modal
 
-// ─────────────────────────────────────────────
-// BOOT
-// ─────────────────────────────────────────────
+/* ═══════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════ */
 document.addEventListener("DOMContentLoaded", () => {
-  applyDarkMode(isDarkMode, false);
-  setSummaryDate();
+  // Apply saved dark mode
+  setDark(DARK, false);
 
-  onAuthStateChanged(auth, (user) => {
+  // Set today's date on summary card
+  setDateDisplay();
+
+  // Listen for auth state
+  onAuthStateChanged(auth, user => {
     const splash = document.getElementById("splash");
     if (user) {
-      currentUser = user;
-      splash.classList.add("splash--hidden");
-      showScreen("app");
-      initApp();
+      USER = user;
+      splash.classList.add("gone");
+      show("appScreen");
+      bootApp();
     } else {
-      currentUser = null;
-      allExpenses = [];
+      USER = null;
+      EXPENSES = [];
       setTimeout(() => {
-        splash.classList.add("splash--hidden");
-        showScreen("auth");
-      }, 1200);
+        splash.classList.add("gone");
+        show("authScreen");
+      }, 1100);
     }
   });
 });
 
-// ─────────────────────────────────────────────
-// SCREENS
-// ─────────────────────────────────────────────
-function showScreen(screen) {
-  document.getElementById("authScreen").classList.toggle("d-none", screen !== "auth");
-  document.getElementById("appScreen").classList.toggle("d-none", screen !== "app");
-}
+async function bootApp() {
+  // Fill user info
+  const name  = USER.displayName || USER.email.split("@")[0];
+  const email = USER.email;
+  $("sbName").textContent  = name;
+  $("sbEmail").textContent = email;
+  $("setName").textContent  = name;
+  $("setEmail").textContent = email;
 
-// ─────────────────────────────────────────────
-// INIT APP
-// ─────────────────────────────────────────────
-async function initApp() {
-  if (!currentUser) return;
+  // Default currency
+  const cur = localStorage.getItem("defCur") || "₹";
+  $("addCur").value = cur;
+  $("setCur").value = cur;
+  syncBadge();
 
-  const displayName = currentUser.displayName || currentUser.email.split("@")[0];
-  const email = currentUser.email;
+  // Dark toggle
+  $("darkChk").checked = DARK;
 
-  setEl("sbUserName",        displayName);
-  setEl("sbUserEmail",       email);
-  setEl("settingsUserName",  displayName);
-  setEl("settingsUserEmail", email);
-
-  const defCur = localStorage.getItem("et_currency") || "₹";
-  const curSel = document.getElementById("expCurrency");
-  if (curSel) curSel.value = defCur;
-  updateCurrencyBadge();
-
-  const setCurSel = document.getElementById("defaultCurrencySelect");
-  if (setCurSel) setCurSel.value = defCur;
-
-  const darkChk = document.getElementById("darkModeToggle");
-  if (darkChk) darkChk.checked = isDarkMode;
-
+  // Load data then go home
   await loadExpenses();
-  navigateTo("home");
+  goPage("home");
 }
 
-// ─────────────────────────────────────────────
-// AUTH — Tab
-// ─────────────────────────────────────────────
-window.showAuthTab = function(tab) {
-  document.getElementById("loginForm").classList.toggle("d-none",  tab !== "login");
-  document.getElementById("signupForm").classList.toggle("d-none", tab !== "signup");
-  document.getElementById("tabLoginBtn").classList.toggle("auth-tab--active",  tab === "login");
-  document.getElementById("tabSignupBtn").classList.toggle("auth-tab--active", tab === "signup");
-  setEl("loginError",  "");
-  setEl("signupError", "");
+/* ═══════════════════════════════════════════
+   SCREEN HELPERS
+═══════════════════════════════════════════ */
+function show(id) {
+  ["authScreen", "appScreen"].forEach(s => $(s).classList.add("hidden"));
+  $(id).classList.remove("hidden");
+}
+
+/* ═══════════════════════════════════════════
+   AUTH — TAB SWITCH
+═══════════════════════════════════════════ */
+window.switchTab = function(tab) {
+  $("loginBox").classList.toggle("hidden",  tab !== "login");
+  $("signupBox").classList.toggle("hidden", tab !== "signup");
+  $("tabLogin").classList.toggle("active",  tab === "login");
+  $("tabSignup").classList.toggle("active", tab === "signup");
+  $("liErr").textContent = "";
+  $("suErr").textContent = "";
 };
 
-// ─────────────────────────────────────────────
-// AUTH — Login
-// ─────────────────────────────────────────────
-window.handleLogin = async function() {
-  const email    = val("loginEmail").trim();
-  const password = val("loginPassword");
-  setEl("loginError", "");
-  if (!email || !password) { setEl("loginError", "Please fill in all fields."); return; }
+/* ═══════════════════════════════════════════
+   AUTH — LOGIN
+═══════════════════════════════════════════ */
+window.doLogin = async function() {
+  const email = $("liEmail").value.trim();
+  const pass  = $("liPass").value;
+  $("liErr").textContent = "";
 
-  setBtnLoading("loginBtn", "loginBtnText", "loginBtnSpinner", true);
+  if (!email || !pass) { $("liErr").textContent = "Please fill in all fields."; return; }
+
+  btnLoad("liBtn", "liTxt", "liSpin", true);
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    setEl("loginError", getAuthError(err.code));
-    setBtnLoading("loginBtn", "loginBtnText", "loginBtnSpinner", false);
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    $("liErr").textContent = authErr(e.code);
+    btnLoad("liBtn", "liTxt", "liSpin", false);
   }
 };
 
-// ─────────────────────────────────────────────
-// AUTH — Signup
-// ─────────────────────────────────────────────
-window.handleSignup = async function() {
-  const name     = val("signupName").trim();
-  const email    = val("signupEmail").trim();
-  const password = val("signupPassword");
-  const confirm  = val("signupConfirm");
-  setEl("signupError", "");
+/* ═══════════════════════════════════════════
+   AUTH — SIGNUP
+═══════════════════════════════════════════ */
+window.doSignup = async function() {
+  const name  = $("suName").value.trim();
+  const email = $("suEmail").value.trim();
+  const pass  = $("suPass").value;
+  const conf  = $("suConf").value;
+  $("suErr").textContent = "";
 
-  if (!name || !email || !password || !confirm) { setEl("signupError", "Please fill in all fields."); return; }
-  if (password.length < 6)  { setEl("signupError", "Password must be at least 6 characters."); return; }
-  if (password !== confirm) { setEl("signupError", "Passwords do not match."); return; }
+  if (!name || !email || !pass || !conf) { $("suErr").textContent = "Please fill in all fields."; return; }
+  if (pass.length < 6)  { $("suErr").textContent = "Password must be at least 6 characters."; return; }
+  if (pass !== conf)    { $("suErr").textContent = "Passwords do not match."; return; }
 
-  setBtnLoading("signupBtn", "signupBtnText", "signupBtnSpinner", true);
+  btnLoad("suBtn", "suTxt", "suSpin", true);
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
     await updateProfile(cred.user, { displayName: name });
-  } catch (err) {
-    setEl("signupError", getAuthError(err.code));
-    setBtnLoading("signupBtn", "signupBtnText", "signupBtnSpinner", false);
+  } catch (e) {
+    $("suErr").textContent = authErr(e.code);
+    btnLoad("suBtn", "suTxt", "suSpin", false);
   }
 };
 
-// ─────────────────────────────────────────────
-// AUTH — Logout
-// ─────────────────────────────────────────────
-window.handleLogout = async function() {
+/* ═══════════════════════════════════════════
+   AUTH — LOGOUT
+═══════════════════════════════════════════ */
+window.doLogout = async function() {
   try {
     await signOut(auth);
-    allExpenses = [];
-    closeSidebar();
-    showToast("Logged out successfully");
-  } catch (err) {
-    showToast("Logout failed. Try again.");
+    EXPENSES = [];
+    closeSB();
+    toast("Logged out successfully");
+  } catch (e) {
+    toast("Logout failed. Try again.");
   }
 };
 
-// ─────────────────────────────────────────────
-// FIRESTORE — Load expenses
-// Tries with orderBy first; falls back to client-side sort
-// if the Firestore composite index hasn't been created yet.
-// ─────────────────────────────────────────────
+/* ═══════════════════════════════════════════
+   FIRESTORE — LOAD
+   Uses client-side sort to avoid needing a
+   composite index (works immediately on deploy)
+═══════════════════════════════════════════ */
 async function loadExpenses() {
-  if (!currentUser) return;
+  if (!USER) return;
   try {
-    const q = query(
-      collection(db, "expenses"),
-      where("uid", "==", currentUser.uid),
-      orderBy("timestamp", "desc")
-    );
+    const q    = query(collection(db, "expenses"), where("uid", "==", USER.uid));
     const snap = await getDocs(q);
-    allExpenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (err) {
-    // Fallback: no orderBy (works before index is built)
-    try {
-      const q2   = query(collection(db, "expenses"), where("uid", "==", currentUser.uid));
-      const snap2 = await getDocs(q2);
-      allExpenses = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
-      allExpenses.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-    } catch (err2) {
-      console.error("loadExpenses failed:", err2);
-      showToast("Could not load expenses.");
-    }
+    EXPENSES   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Sort newest first by timestamp seconds
+    EXPENSES.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+  } catch (e) {
+    console.error("loadExpenses:", e);
+    toast("Could not load expenses. Check connection.");
   }
-  renderAll();
+  redrawAll();
 }
 
-// ─────────────────────────────────────────────
-// EXPENSE — Add
-// FIX: amount validated properly; Timestamp.fromDate used correctly
-// ─────────────────────────────────────────────
-window.handleAddExpense = async function() {
-  const name     = val("expName").trim();
-  const amountRaw = val("expAmount").trim();
-  const currency  = val("expCurrency") || "₹";
-  const amount    = parseFloat(amountRaw);
+/* ═══════════════════════════════════════════
+   EXPENSE — ADD
+═══════════════════════════════════════════ */
+window.doAdd = async function() {
+  const name     = $("addName").value.trim();
+  const amtRaw   = $("addAmt").value.trim();
+  const currency = $("addCur").value || "₹";
+  const amount   = parseFloat(amtRaw);
+  $("addErr").textContent = "";
 
-  setEl("addExpenseError", "");
+  // Validate
+  if (!name) {
+    $("addErr").textContent = "Please enter an expense name.";
+    return;
+  }
+  if (amtRaw === "" || isNaN(amount) || amount < 0) {
+    $("addErr").textContent = "Please enter a valid amount.";
+    return;
+  }
 
-  if (!name)                      { setEl("addExpenseError", "Please enter an expense name."); return; }
-  if (amountRaw === "")           { setEl("addExpenseError", "Please enter an amount."); return; }
-  if (isNaN(amount) || amount < 0){ setEl("addExpenseError", "Please enter a valid amount (0 or more)."); return; }
-
-  setBtnLoading("addExpenseBtn", "addBtnText", "addBtnSpinner", true);
+  btnLoad("addBtn", "addTxt", "addSpin", true);
 
   try {
-    const now     = new Date();
-    const expense = {
-      uid:       currentUser.uid,
+    const now = new Date();
+    const data = {
+      uid:       USER.uid,
       name:      name,
       amount:    amount,
       currency:  currency,
-      date:      formatDate(now),
-      time:      formatTime(now),
+      date:      fmtDate(now),
+      time:      fmtTime(now),
       timestamp: Timestamp.fromDate(now)
     };
 
-    const docRef = await addDoc(collection(db, "expenses"), expense);
+    const ref = await addDoc(collection(db, "expenses"), data);
 
-    // Add to local array at the front (newest first)
-    allExpenses.unshift({ id: docRef.id, ...expense });
+    // Add to local array at start (newest first)
+    EXPENSES.unshift({ id: ref.id, ...data });
 
-    // Clear inputs
-    document.getElementById("expName").value   = "";
-    document.getElementById("expAmount").value = "";
+    // Clear form
+    $("addName").value = "";
+    $("addAmt").value  = "";
 
-    renderAll();
-    showToast("✓ Expense added");
-  } catch (err) {
-    console.error("Add expense error:", err);
-    setEl("addExpenseError", "Failed to save. Check your connection and try again.");
+    redrawAll();
+    toast("✓ Expense added");
+  } catch (e) {
+    console.error("doAdd:", e);
+    $("addErr").textContent = "Save failed. Check your connection.";
   }
 
-  setBtnLoading("addExpenseBtn", "addBtnText", "addBtnSpinner", false);
+  btnLoad("addBtn", "addTxt", "addSpin", false);
 };
 
-// ─────────────────────────────────────────────
-// EXPENSE — Delete single
-// FIX: use a data-id attribute approach via event delegation
-// instead of passing id/name directly in onclick strings
-// (special characters in names were breaking onclick="...")
-// ─────────────────────────────────────────────
-window.handleDeleteExpense = function(expenseId) {
-  // Find the expense in local array to get the name for the modal
-  const expense = allExpenses.find(e => e.id === expenseId);
-  if (!expense) { showToast("Expense not found."); return; }
+/* ═══════════════════════════════════════════
+   EXPENSE — DELETE SINGLE
+   Called via data-id attribute on button —
+   NO user data passed through onclick strings
+═══════════════════════════════════════════ */
+function deleteExpense(id) {
+  const exp = EXPENSES.find(e => e.id === id);
+  if (!exp) return;
 
-  openConfirmModal(
+  openModal(
     "Delete Expense",
-    `Delete "${expense.name}"? This cannot be undone.`,
+    `Delete "${exp.name}"? This cannot be undone.`,
     async () => {
       try {
-        await deleteDoc(doc(db, "expenses", expenseId));
-        allExpenses = allExpenses.filter(e => e.id !== expenseId);
-        renderAll();
-        showToast("Expense deleted");
-      } catch (err) {
-        console.error("Delete error:", err);
-        showToast("Delete failed. Check your connection.");
+        await deleteDoc(doc(db, "expenses", id));
+        EXPENSES = EXPENSES.filter(e => e.id !== id);
+        redrawAll();
+        toast("Expense deleted");
+      } catch (e) {
+        console.error("deleteExpense:", e);
+        toast("Delete failed. Check your connection.");
       }
     }
   );
-};
+}
 
-// ─────────────────────────────────────────────
-// EXPENSE — Clear All
-// FIX: batch.commit() in chunks of 500 (Firestore limit)
-// ─────────────────────────────────────────────
-window.handleClearAll = function() {
-  if (!allExpenses.length) { showToast("No expenses to clear."); return; }
+/* ═══════════════════════════════════════════
+   EXPENSE — CLEAR ALL
+   Batches in chunks of 500 (Firestore limit)
+═══════════════════════════════════════════ */
+window.doClearAll = function() {
+  if (!EXPENSES.length) { toast("No expenses to clear."); return; }
 
-  openConfirmModal(
+  openModal(
     "Clear All Expenses",
-    `Permanently delete all ${allExpenses.length} expense${allExpenses.length !== 1 ? "s" : ""}? This cannot be undone.`,
+    `Delete all ${EXPENSES.length} expense${EXPENSES.length !== 1 ? "s" : ""}? This cannot be undone.`,
     async () => {
       try {
-        // Firestore batch limit = 500 writes per commit
-        const CHUNK = 500;
-        const ids   = allExpenses.map(e => e.id);
-        for (let i = 0; i < ids.length; i += CHUNK) {
+        const ids = [...EXPENSES.map(e => e.id)];
+        // Commit in chunks of 500 (Firestore batch limit)
+        for (let i = 0; i < ids.length; i += 500) {
           const batch = writeBatch(db);
-          ids.slice(i, i + CHUNK).forEach(id => batch.delete(doc(db, "expenses", id)));
+          ids.slice(i, i + 500).forEach(id => batch.delete(doc(db, "expenses", id)));
           await batch.commit();
         }
-        allExpenses = [];
-        renderAll();
-        showToast("All expenses cleared");
-      } catch (err) {
-        console.error("Clear all error:", err);
-        showToast("Clear failed. Check your connection.");
+        EXPENSES = [];
+        redrawAll();
+        toast("All expenses cleared");
+      } catch (e) {
+        console.error("doClearAll:", e);
+        toast("Clear failed. Check your connection.");
       }
     }
   );
 };
 
-// ─────────────────────────────────────────────
-// RENDER — All
-// FIX: renderStats() now always runs for summary card;
-// the guard inside only skips the stats page DOM update
-// ─────────────────────────────────────────────
-function renderAll() {
-  renderSummary();
-  renderHistory();
-  if (currentPage === "stats")    renderStats();
-  if (currentPage === "calendar") renderCalendar();
+/* ═══════════════════════════════════════════
+   REDRAW — ALL
+═══════════════════════════════════════════ */
+function redrawAll() {
+  drawSummary();
+  drawHistory();
+  if (PAGE === "stats")    drawStats();
+  if (PAGE === "calendar") drawCalendar();
 }
 
-// ─────────────────────────────────────────────
-// RENDER — Summary card (today total + count)
-// ─────────────────────────────────────────────
-function renderSummary() {
-  const todayStr  = formatDate(new Date());
-  const todayExps = allExpenses.filter(e => e.date === todayStr);
-  const total     = todayExps.reduce((s, e) => s + (e.amount || 0), 0);
-  const currency  = todayExps.length
-    ? todayExps[0].currency
-    : (val("expCurrency") || "₹");
-
-  setEl("todayTotal", `${currency} ${total.toFixed(2)}`);
-  setEl("todayCount", String(todayExps.length));
+/* ═══════════════════════════════════════════
+   DRAW — SUMMARY CARD
+═══════════════════════════════════════════ */
+function drawSummary() {
+  const today  = fmtDate(new Date());
+  const todExp = EXPENSES.filter(e => e.date === today);
+  const total  = todExp.reduce((s, e) => s + (e.amount || 0), 0);
+  const cur    = todExp.length ? todExp[0].currency : ($("addCur").value || "₹");
+  $("scAmount").textContent = cur + " " + total.toFixed(2);
+  $("scCount").textContent  = todExp.length;
 }
 
-// ─────────────────────────────────────────────
-// RENDER — History
-// FIX: delete button uses data-id attribute; no expense
-// name passed through onclick (avoids HTML injection / quoting bugs)
-// ─────────────────────────────────────────────
-window.renderHistory = function() {
-  const container  = document.getElementById("historyContainer");
+/* ═══════════════════════════════════════════
+   DRAW — HISTORY
+   Delete buttons use data-id + addEventListener.
+   No user data ever goes inside onclick="..."
+═══════════════════════════════════════════ */
+window.renderHistory = drawHistory;
+
+function drawHistory() {
+  const container = $("histList");
   if (!container) return;
 
-  const searchTerm = (val("searchInput") || "").toLowerCase().trim();
-  let expenses = searchTerm
-    ? allExpenses.filter(e =>
-        e.name.toLowerCase().includes(searchTerm) ||
-        String(e.amount).includes(searchTerm)
-      )
-    : allExpenses;
+  const q = ($("searchInp")?.value || "").toLowerCase().trim();
+  const list = q
+    ? EXPENSES.filter(e => e.name.toLowerCase().includes(q) || String(e.amount).includes(q))
+    : EXPENSES;
 
-  if (!expenses.length) {
+  if (!list.length) {
     container.innerHTML = `
-      <div class="empty-state">
+      <div class="empty-box">
         <i class="fas fa-receipt"></i>
-        <p>${searchTerm
-          ? `No expenses match "<strong>${escHtmlText(searchTerm)}</strong>"`
-          : "No expenses yet.<br/>Add your first expense above!"
-        }</p>
+        <p>${q ? "No expenses match your search." : "No expenses yet.<br/>Add your first expense above!"}</p>
       </div>`;
     return;
   }
 
   // Group by date
   const groups = {};
-  expenses.forEach(e => {
+  list.forEach(e => {
     const d = e.date || "Unknown";
     if (!groups[d]) groups[d] = [];
     groups[d].push(e);
   });
 
-  const sortedDates  = Object.keys(groups).sort((a, b) => b.localeCompare(a));
-  const todayStr     = formatDate(new Date());
-  const yesterdayStr = formatDate(new Date(Date.now() - 86400000));
+  const TODAY     = fmtDate(new Date());
+  const YESTERDAY = fmtDate(new Date(Date.now() - 86400000));
+  const dates     = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
   let html = "";
-
-  sortedDates.forEach(dateStr => {
-    const items    = groups[dateStr];
-    const total    = items.reduce((s, e) => s + (e.amount || 0), 0);
-    const currency = items[0]?.currency || "₹";
-    const groupId  = "grp_" + dateStr.replace(/-/g, "");
-
-    let groupName = dateStr;
-    let groupSub  = dateStr;
-    if (dateStr === todayStr)     { groupName = "TODAY";     groupSub = "• " + dateStr; }
-    else if (dateStr === yesterdayStr) { groupName = "YESTERDAY"; groupSub = "• " + dateStr; }
+  dates.forEach(date => {
+    const items  = groups[date];
+    const total  = items.reduce((s, e) => s + (e.amount || 0), 0);
+    const cur    = items[0]?.currency || "₹";
+    const gid    = "g" + date.replace(/-/g, "");
+    let label = date, sub = date;
+    if (date === TODAY)     { label = "TODAY";     sub = "• " + date; }
+    else if (date === YESTERDAY) { label = "YESTERDAY"; sub = "• " + date; }
 
     html += `
     <div class="day-group">
-      <div class="day-group-header" onclick="toggleDayGroup('${groupId}')">
-        <div class="day-group-left">
-          <span class="day-group-name">${groupName}</span>
-          <span class="day-group-date">${groupSub}</span>
-        </div>
-        <div class="day-group-right">
-          <span class="day-group-total">Total: ${currency} ${total.toFixed(2)}</span>
-          <span class="day-group-badge">${items.length} Expense${items.length !== 1 ? "s" : ""}</span>
-          <i class="fas fa-chevron-up day-group-arrow day-group-arrow--up" id="${groupId}_arrow"></i>
+      <div class="dg-hdr" onclick="toggleGroup('${gid}')">
+        <div><div class="dg-name">${label}</div><div class="dg-sub">${sub}</div></div>
+        <div class="dg-right">
+          <span class="dg-total">Total: ${cur} ${total.toFixed(2)}</span>
+          <span class="dg-badge">${items.length} Expense${items.length !== 1 ? "s" : ""}</span>
+          <i class="fas fa-chevron-up dg-arrow" id="arr_${gid}"></i>
         </div>
       </div>
-      <div class="day-group-items" id="${groupId}_items">
-        ${items.map((exp, idx) => `
-          <div class="expense-item">
+      <div class="dg-items" id="body_${gid}">
+        ${items.map((e, i) => `
+          <div class="exp-item">
             <span class="item-dot"></span>
-            <div class="item-num">${idx + 1}</div>
+            <div class="item-num">${i + 1}</div>
             <div class="item-info">
-              <div class="item-name">${escHtmlText(exp.name)}</div>
-              <div class="item-time">${exp.time || ""}</div>
+              <div class="item-name">${safe(e.name)}</div>
+              <div class="item-time">${e.time || ""}</div>
             </div>
-            <span class="item-amount">${exp.currency || currency} ${(exp.amount || 0).toFixed(2)}</span>
-            <button
-              class="item-delete-btn"
-              data-id="${exp.id}"
-              title="Delete expense"
-              aria-label="Delete ${escHtmlAttr(exp.name)}"
-            ><i class="fas fa-trash"></i></button>
-          </div>
-        `).join("")}
+            <span class="item-amt">${e.currency || cur} ${(e.amount || 0).toFixed(2)}</span>
+            <button class="item-del" data-eid="${e.id}" title="Delete"><i class="fas fa-trash"></i></button>
+          </div>`).join("")}
       </div>
     </div>`;
   });
 
   container.innerHTML = html;
 
-  // ── Attach delete listeners via data-id (no inline onclick with user data) ──
-  container.querySelectorAll(".item-delete-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-id");
-      if (id) handleDeleteExpense(id);
+  // Attach delete listeners using data-eid — safe for all characters in expense names
+  container.querySelectorAll(".item-del").forEach(btn => {
+    btn.addEventListener("click", function() {
+      deleteExpense(this.getAttribute("data-eid"));
     });
   });
+}
+
+/* collapse / expand group */
+window.toggleGroup = function(gid) {
+  const body = $("body_" + gid);
+  const arr  = $("arr_"  + gid);
+  if (!body) return;
+  const open = !body.classList.contains("hidden");
+  body.classList.toggle("hidden", open);
+  arr.classList.toggle("down", open);
 };
 
-// Collapse / expand a day group
-window.toggleDayGroup = function(groupId) {
-  const items = document.getElementById(groupId + "_items");
-  const arrow = document.getElementById(groupId + "_arrow");
-  if (!items || !arrow) return;
-  const open = !items.classList.contains("d-none");
-  items.classList.toggle("d-none", open);
-  arrow.classList.toggle("day-group-arrow--up",   !open);
-  arrow.classList.toggle("day-group-arrow--down",  open);
-};
+/* ═══════════════════════════════════════════
+   DRAW — STATS
+═══════════════════════════════════════════ */
+function drawStats() {
+  const today   = fmtDate(new Date());
+  const moKey   = today.slice(0, 7);
+  const cur     = EXPENSES[0]?.currency || $("addCur").value || "₹";
+  const todExp  = EXPENSES.filter(e => e.date === today);
+  const moExp   = EXPENSES.filter(e => (e.date || "").startsWith(moKey));
+  const todTot  = todExp.reduce((s, e) => s + (e.amount || 0), 0);
+  const moTot   = moExp.reduce((s, e) => s + (e.amount || 0), 0);
+  const allTot  = EXPENSES.reduce((s, e) => s + (e.amount || 0), 0);
+  const days    = new Set(EXPENSES.map(e => e.date)).size || 1;
 
-// ─────────────────────────────────────────────
-// RENDER — Stats page
-// ─────────────────────────────────────────────
-function renderStats() {
-  const statsGrid = document.getElementById("statsCardsGrid");
-  if (!statsGrid) return;
+  $("statsGrid").innerHTML = [
+    ["TODAY",       cur + " " + todTot.toFixed(0), todExp.length + " expense" + (todExp.length !== 1 ? "s" : "")],
+    ["THIS MONTH",  cur + " " + moTot.toFixed(0),  moExp.length  + " expense" + (moExp.length  !== 1 ? "s" : "")],
+    ["ALL TIME",    cur + " " + allTot.toFixed(0), EXPENSES.length + " total"],
+    ["DAILY AVG",   cur + " " + (allTot / days).toFixed(0), "per active day"]
+  ].map(([l, v, s]) =>
+    `<div class="stat-card"><div class="stat-lbl">${l}</div><div class="stat-val">${v}</div><div class="stat-sub">${s}</div></div>`
+  ).join("");
 
-  const todayStr  = formatDate(new Date());
-  const monthStr  = todayStr.slice(0, 7);
-  const currency  = allExpenses[0]?.currency || val("expCurrency") || "₹";
-
-  const todayExps = allExpenses.filter(e => e.date === todayStr);
-  const monthExps = allExpenses.filter(e => (e.date || "").startsWith(monthStr));
-
-  const todayTotal  = todayExps.reduce((s, e) => s + (e.amount || 0), 0);
-  const monthTotal  = monthExps.reduce((s, e) => s + (e.amount || 0), 0);
-  const allTotal    = allExpenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const uniqueDays  = new Set(allExpenses.map(e => e.date)).size || 1;
-  const dailyAvg    = allTotal / uniqueDays;
-
-  statsGrid.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">TODAY</div>
-      <div class="stat-value">${currency} ${todayTotal.toFixed(0)}</div>
-      <div class="stat-sub">${todayExps.length} expense${todayExps.length !== 1 ? "s" : ""}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">THIS MONTH</div>
-      <div class="stat-value">${currency} ${monthTotal.toFixed(0)}</div>
-      <div class="stat-sub">${monthExps.length} expense${monthExps.length !== 1 ? "s" : ""}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">ALL TIME</div>
-      <div class="stat-value">${currency} ${allTotal.toFixed(0)}</div>
-      <div class="stat-sub">${allExpenses.length} total expenses</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">DAILY AVG</div>
-      <div class="stat-value">${currency} ${dailyAvg.toFixed(0)}</div>
-      <div class="stat-sub">per active day</div>
-    </div>`;
-
-  // Bar chart — last 7 days
+  // 7-day bar chart
   const bars = [];
   for (let i = 6; i >= 0; i--) {
-    const d    = new Date(Date.now() - i * 86400000);
-    const dStr = formatDate(d);
-    const sum  = allExpenses.filter(e => e.date === dStr).reduce((s, e) => s + (e.amount || 0), 0);
-    bars.push({ day: d.toLocaleDateString("en", { weekday: "short" }).slice(0, 2), sum, isToday: dStr === todayStr });
+    const d   = new Date(Date.now() - i * 86400000);
+    const ds  = fmtDate(d);
+    const sum = EXPENSES.filter(e => e.date === ds).reduce((s, e) => s + (e.amount || 0), 0);
+    bars.push({ day: d.toLocaleDateString("en", { weekday: "short" }).slice(0, 2), sum, today: ds === today });
   }
-  const maxSum = Math.max(...bars.map(b => b.sum), 1);
-  document.getElementById("barChart").innerHTML = bars.map(b => `
-    <div class="bar-col">
-      <div class="bar-amount">${b.sum > 0 ? b.sum.toFixed(0) : ""}</div>
-      <div class="bar-fill${b.isToday ? " bar-fill--today" : ""}"
-           style="height:${Math.max((b.sum / maxSum) * 90, b.sum > 0 ? 4 : 0)}px"></div>
-      <div class="bar-day">${b.day}</div>
+  const mx = Math.max(...bars.map(b => b.sum), 1);
+  $("barChart").innerHTML = bars.map(b => `
+    <div class="bc">
+      <div class="bc-amt">${b.sum > 0 ? b.sum.toFixed(0) : ""}</div>
+      <div class="bc-fill${b.today ? " today" : ""}" style="height:${Math.max((b.sum / mx) * 88, b.sum > 0 ? 4 : 0)}px"></div>
+      <div class="bc-day">${b.day}</div>
     </div>`).join("");
 
-  // Top 5 expenses
-  const top   = [...allExpenses].sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 5);
-  const topEl = document.getElementById("topExpenses");
-  topEl.innerHTML = top.length
+  // Top 5
+  const top = [...EXPENSES].sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 5);
+  $("topList").innerHTML = top.length
     ? top.map((e, i) => `
-        <div class="top-expense-item">
-          <div class="top-expense-rank">${i + 1}</div>
-          <div class="top-expense-name">${escHtmlText(e.name)}</div>
-          <div class="top-expense-amount">${e.currency || currency} ${(e.amount || 0).toFixed(2)}</div>
+        <div class="top-item">
+          <div class="top-rank">${i + 1}</div>
+          <div class="top-name">${safe(e.name)}</div>
+          <div class="top-amt">${e.currency || cur} ${(e.amount || 0).toFixed(2)}</div>
         </div>`).join("")
-    : `<p style="font-size:13px;color:var(--text-muted);padding:12px 0">No expenses yet.</p>`;
+    : `<p style="font-size:13px;color:var(--text3);padding:10px 0">No expenses yet.</p>`;
 }
 
-// ─────────────────────────────────────────────
-// RENDER — Calendar
-// ─────────────────────────────────────────────
-function renderCalendar() {
-  const labelEl = document.getElementById("calMonthLabel");
-  const gridEl  = document.getElementById("calendarGrid");
-  if (!labelEl || !gridEl) return;
-
-  labelEl.textContent = new Date(calYear, calMonth, 1)
+/* ═══════════════════════════════════════════
+   DRAW — CALENDAR
+═══════════════════════════════════════════ */
+function drawCalendar() {
+  $("calLabel").textContent = new Date(CAL_YEAR, CAL_MONTH, 1)
     .toLocaleDateString("en", { month: "long", year: "numeric" });
 
-  const firstDay    = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const todayStr    = formatDate(new Date());
-  const expDates    = new Set(allExpenses.map(e => e.date));
+  const first   = new Date(CAL_YEAR, CAL_MONTH, 1).getDay();
+  const days    = new Date(CAL_YEAR, CAL_MONTH + 1, 0).getDate();
+  const today   = fmtDate(new Date());
+  const hasDates = new Set(EXPENSES.map(e => e.date));
+  const wk      = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
-  const weekdays = ["Su","Mo","Tu","We","Th","Fr","Sa"];
-  let html = `<div class="cal-weekdays-row">` +
-    weekdays.map(d => `<div class="cal-weekday-cell">${d}</div>`).join("") +
-    `</div><div class="cal-days-grid">`;
-
-  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day-cell cal-day-cell--empty"></div>`;
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${calYear}-${pad(calMonth + 1)}-${pad(d)}`;
-    let cls = "cal-day-cell";
-    if (dateStr === todayStr)  cls += " cal-day-cell--today";
-    if (expDates.has(dateStr)) cls += " cal-day-cell--has-expense";
-    html += `<div class="${cls}" onclick="showCalendarDay('${dateStr}')">${d}</div>`;
+  let html = `<div class="cal-wk">${wk.map(d => `<div class="cal-wk-cell">${d}</div>`).join("")}</div><div class="cal-days">`;
+  for (let i = 0; i < first; i++) html += `<div class="cal-day blank"></div>`;
+  for (let d = 1; d <= days; d++) {
+    const ds  = `${CAL_YEAR}-${pad(CAL_MONTH + 1)}-${pad(d)}`;
+    let   cls = "cal-day";
+    if (ds === today)        cls += " today";
+    if (hasDates.has(ds))   cls += " has-exp";
+    html += `<div class="${cls}" onclick="calDay('${ds}')">${d}</div>`;
   }
-  html += `</div>`;
-  gridEl.innerHTML = html;
+  html += "</div>";
+  $("calGrid").innerHTML = html;
 }
 
-window.showCalendarDay = function(dateStr) {
-  const detailEl = document.getElementById("calDayDetail");
-  if (!detailEl) return;
-
-  const dayExps  = allExpenses.filter(e => e.date === dateStr);
-  if (!dayExps.length) {
-    detailEl.innerHTML = `<div class="cal-day-detail-title">${dateStr} — No expenses</div>`;
-    detailEl.classList.remove("d-none");
-    return;
+window.calDay = function(ds) {
+  const det  = $("calDetail");
+  const exps = EXPENSES.filter(e => e.date === ds);
+  if (!exps.length) {
+    det.innerHTML = `<div class="cal-det-title">${ds} — No expenses</div>`;
+  } else {
+    const tot = exps.reduce((s, e) => s + (e.amount || 0), 0);
+    const cur = exps[0].currency || "₹";
+    det.innerHTML = `<div class="cal-det-title">${ds} — Total: ${cur} ${tot.toFixed(2)}</div>` +
+      exps.map(e => `
+        <div class="cal-det-row">
+          <span>${safe(e.name)}</span>
+          <span class="cal-det-amt">${e.currency || cur} ${(e.amount || 0).toFixed(2)}</span>
+        </div>`).join("");
   }
-
-  const total    = dayExps.reduce((s, e) => s + (e.amount || 0), 0);
-  const currency = dayExps[0]?.currency || "₹";
-
-  let html = `<div class="cal-day-detail-title">${dateStr} — Total: ${currency} ${total.toFixed(2)}</div>`;
-  dayExps.forEach(e => {
-    html += `
-      <div class="cal-detail-item">
-        <span class="cal-detail-name">${escHtmlText(e.name)}</span>
-        <span class="cal-detail-amount">${e.currency || currency} ${(e.amount || 0).toFixed(2)}</span>
-      </div>`;
-  });
-  detailEl.innerHTML = html;
-  detailEl.classList.remove("d-none");
+  det.classList.remove("hidden");
 };
 
-window.calendarChangeMonth = function(delta) {
-  calMonth += delta;
-  if (calMonth > 11) { calMonth = 0; calYear++; }
-  if (calMonth < 0)  { calMonth = 11; calYear--; }
-  const d = document.getElementById("calDayDetail");
-  if (d) d.classList.add("d-none");
-  renderCalendar();
+window.calMove = function(d) {
+  CAL_MONTH += d;
+  if (CAL_MONTH > 11) { CAL_MONTH = 0; CAL_YEAR++; }
+  if (CAL_MONTH < 0)  { CAL_MONTH = 11; CAL_YEAR--; }
+  $("calDetail").classList.add("hidden");
+  drawCalendar();
 };
 
-// ─────────────────────────────────────────────
-// NAVIGATION
-// ─────────────────────────────────────────────
-window.navigateTo = function(page) {
-  currentPage = page;
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+window.goPage = function(page) {
+  PAGE = page;
   ["home","stats","calendar","settings"].forEach(p => {
-    const pageEl = document.getElementById(p + "Page");
-    const navEl  = document.getElementById("nav" + capitalize(p));
-    if (pageEl) pageEl.classList.toggle("page--active", p === page);
-    if (navEl)  navEl.classList.toggle("nav-btn--active", p === page);
+    $("pg" + cap(p))?.classList.toggle("active-page", p === page);
+    $("nav" + cap(p))?.classList.toggle("active", p === page);
   });
-  document.querySelectorAll(".sb-nav-item").forEach((btn, i) => {
-    btn.classList.toggle("sb-nav-item--active",
-      i === ["home","stats","calendar","settings"].indexOf(page));
-  });
-  if (page === "stats")    renderStats();
-  if (page === "calendar") renderCalendar();
+  if (page === "stats")    drawStats();
+  if (page === "calendar") drawCalendar();
 };
 
-window.scrollToAddExpense = function() {
-  navigateTo("home");
-  setTimeout(() => {
-    const card = document.querySelector(".section-card");
-    if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
-    const input = document.getElementById("expName");
-    if (input) input.focus();
-  }, 100);
+window.fabAction = function() {
+  goPage("home");
+  setTimeout(() => { $("addName")?.focus(); }, 80);
 };
 
-// ─────────────────────────────────────────────
-// SIDEBAR
-// ─────────────────────────────────────────────
-window.openSidebar = function() {
-  document.getElementById("sidebar").classList.replace("sidebar--closed","sidebar--open");
-  document.getElementById("sidebarOverlay").classList.remove("d-none");
+/* ═══════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════ */
+window.openSB = function() {
+  $("sidebar").classList.replace("closed", "open");
+  $("sbOverlay").classList.remove("hidden");
 };
-window.closeSidebar = function() {
-  document.getElementById("sidebar").classList.replace("sidebar--open","sidebar--closed");
-  document.getElementById("sidebarOverlay").classList.add("d-none");
+window.closeSB = function() {
+  $("sidebar").classList.replace("open", "closed");
+  $("sbOverlay").classList.add("hidden");
 };
 
-// ─────────────────────────────────────────────
-// DARK MODE
-// ─────────────────────────────────────────────
-window.toggleDarkMode = function() {
-  isDarkMode = !isDarkMode;
-  localStorage.setItem("et_dark", isDarkMode);
-  applyDarkMode(isDarkMode, true);
+/* ═══════════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════════ */
+window.toggleTheme = function() {
+  DARK = !DARK;
+  localStorage.setItem("dark", DARK ? "1" : "0");
+  setDark(DARK, true);
 };
-window.handleDarkToggle = function() {
-  isDarkMode = document.getElementById("darkModeToggle").checked;
-  localStorage.setItem("et_dark", isDarkMode);
-  applyDarkMode(isDarkMode, false);
+window.handleDarkChk = function() {
+  DARK = $("darkChk").checked;
+  localStorage.setItem("dark", DARK ? "1" : "0");
+  setDark(DARK, false);
 };
-function applyDarkMode(dark, syncToggle) {
-  document.body.classList.toggle("dark-mode", dark);
-  const icon = document.getElementById("themeIcon");
-  if (icon) icon.className = dark ? "fas fa-sun" : "fas fa-moon";
-  if (syncToggle) {
-    const chk = document.getElementById("darkModeToggle");
-    if (chk) chk.checked = dark;
-  }
+function setDark(on, sync) {
+  document.body.classList.toggle("dark", on);
+  const ico = $("themeIco");
+  if (ico) ico.className = on ? "fas fa-sun" : "fas fa-moon";
+  if (sync) { const c = $("darkChk"); if (c) c.checked = on; }
 }
 
-// ─────────────────────────────────────────────
-// CURRENCY
-// ─────────────────────────────────────────────
-window.updateCurrencyBadge = function() {
-  const badge = document.getElementById("currencyBadge");
-  if (badge) badge.textContent = val("expCurrency") || "₹";
+/* ═══════════════════════════════════════════
+   CURRENCY
+═══════════════════════════════════════════ */
+window.syncBadge = function() {
+  const b = $("curBadge");
+  if (b) b.textContent = $("addCur").value || "₹";
 };
-window.saveDefaultCurrency = function() {
-  const cur = val("defaultCurrencySelect") || "₹";
-  localStorage.setItem("et_currency", cur);
-  const sel = document.getElementById("expCurrency");
-  if (sel) { sel.value = cur; updateCurrencyBadge(); }
-  showToast("Default currency saved");
+window.saveCur = function() {
+  const c = $("setCur").value || "₹";
+  localStorage.setItem("defCur", c);
+  $("addCur").value = c;
+  syncBadge();
+  toast("Default currency saved");
 };
 
-// ─────────────────────────────────────────────
-// MODAL (confirmation dialog)
-// ─────────────────────────────────────────────
-function openConfirmModal(title, message, onConfirm) {
-  setEl("modalTitle",   title);
-  setEl("modalMessage", message);
-  modalCallback = onConfirm;
-  document.getElementById("confirmModal").classList.remove("d-none");
-  document.getElementById("modalConfirmBtn").onclick = () => {
-    closeConfirmModal();
-    if (typeof modalCallback === "function") modalCallback();
-  };
+/* ═══════════════════════════════════════════
+   CONFIRM MODAL
+═══════════════════════════════════════════ */
+function openModal(title, msg, cb) {
+  $("modalTitle").textContent = title;
+  $("modalMsg").textContent   = msg;
+  MODAL_CB = cb;
+  $("modal").classList.remove("hidden");
+  $("modalOk").onclick = () => { closeModal(); if (MODAL_CB) MODAL_CB(); };
 }
-window.closeConfirmModal = function() {
-  document.getElementById("confirmModal").classList.add("d-none");
-  modalCallback = null;
+window.closeModal = function() {
+  $("modal").classList.add("hidden");
+  MODAL_CB = null;
 };
 
-// ─────────────────────────────────────────────
-// TOAST
-// ─────────────────────────────────────────────
-let toastTimer = null;
-function showToast(msg) {
-  const t = document.getElementById("toast");
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+let _tt = null;
+function toast(msg) {
+  const t = $("toast");
   if (!t) return;
   t.textContent = msg;
-  t.classList.remove("d-none");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.add("d-none"), 3000);
+  t.classList.remove("hidden");
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.classList.add("hidden"), 3000);
 }
 
-// ─────────────────────────────────────────────
-// PASSWORD TOGGLE
-// ─────────────────────────────────────────────
-window.togglePasswordVisibility = function(inputId, btn) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-  const isText  = input.type === "text";
-  input.type    = isText ? "password" : "text";
-  const icon    = btn.querySelector("i");
-  if (icon) icon.className = isText ? "fas fa-eye-slash" : "fas fa-eye";
+/* ═══════════════════════════════════════════
+   PASSWORD TOGGLE
+═══════════════════════════════════════════ */
+window.toggleEye = function(id, btn) {
+  const inp = $(id);
+  if (!inp) return;
+  const txt = inp.type === "text";
+  inp.type  = txt ? "password" : "text";
+  btn.querySelector("i").className = txt ? "fas fa-eye-slash" : "fas fa-eye";
 };
 
-// ─────────────────────────────────────────────
-// DATE / TIME HELPERS
-// ─────────────────────────────────────────────
-function setSummaryDate() {
+/* ═══════════════════════════════════════════
+   DATE / TIME HELPERS
+═══════════════════════════════════════════ */
+function setDateDisplay() {
   const d = new Date();
-  const dateEl = document.getElementById("summaryDate");
-  const dayEl  = document.getElementById("summaryWeekday");
-  if (dateEl) dateEl.textContent = d.toLocaleDateString("en-IN",
-    { day: "2-digit", month: "short", year: "numeric" });
-  if (dayEl)  dayEl.textContent  = d.toLocaleDateString("en-IN", { weekday: "long" });
+  const dateEl = $("scDate"), dayEl = $("scDay");
+  if (dateEl) dateEl.textContent = d.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
+  if (dayEl)  dayEl.textContent  = d.toLocaleDateString("en-IN", { weekday:"long" });
 }
-function formatDate(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+function fmtDate(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
-function formatTime(d) {
-  let h = d.getHours(), m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
+function fmtTime(d) {
+  let h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
-  return `${pad(h)}:${pad(m)} ${ampm}`;
+  return `${pad(h)}:${pad(m)} ${ap}`;
 }
 function pad(n) { return String(n).padStart(2, "0"); }
 
-// ─────────────────────────────────────────────
-// DOM HELPERS
-// ─────────────────────────────────────────────
-function setEl(id, text) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = text;
-}
-function val(id) {
-  const el = document.getElementById(id);
-  return el ? el.value : "";
-}
-// Safe for innerHTML text content (never put in attributes)
-function escHtmlText(str) {
-  const div = document.createElement("div");
-  div.appendChild(document.createTextNode(String(str)));
-  return div.innerHTML;
-}
-// Safe for HTML attribute values (used in aria-label etc.)
-function escHtmlAttr(str) {
-  return String(str)
-    .replace(/&/g,"&amp;").replace(/"/g,"&quot;")
-    .replace(/'/g,"&#x27;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-function setBtnLoading(btnId, textId, spinnerId, loading) {
-  const btn     = document.getElementById(btnId);
-  const text    = document.getElementById(textId);
-  const spinner = document.getElementById(spinnerId);
-  if (btn)     btn.disabled = loading;
-  if (text)    text.classList.toggle("d-none",  loading);
-  if (spinner) spinner.classList.toggle("d-none", !loading);
+/* ═══════════════════════════════════════════
+   DOM / STRING HELPERS
+═══════════════════════════════════════════ */
+function $(id) { return document.getElementById(id); }
+
+// Safely encode text for innerHTML — uses browser's own encoder
+function safe(str) {
+  const d = document.createElement("div");
+  d.appendChild(document.createTextNode(String(str)));
+  return d.innerHTML;
 }
 
-// ─────────────────────────────────────────────
-// AUTH ERROR MAP
-// ─────────────────────────────────────────────
-function getAuthError(code) {
-  const map = {
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function btnLoad(btnId, txtId, spinId, on) {
+  const b = $(btnId), t = $(txtId), s = $(spinId);
+  if (b) b.disabled = on;
+  if (t) t.classList.toggle("hidden",  on);
+  if (s) s.classList.toggle("hidden", !on);
+}
+
+/* ═══════════════════════════════════════════
+   AUTH ERROR MAP
+═══════════════════════════════════════════ */
+function authErr(code) {
+  return {
     "auth/user-not-found":         "No account found with this email.",
-    "auth/wrong-password":         "Incorrect password. Please try again.",
+    "auth/wrong-password":         "Incorrect password.",
     "auth/invalid-credential":     "Invalid email or password.",
     "auth/invalid-email":          "Please enter a valid email address.",
-    "auth/email-already-in-use":   "An account with this email already exists.",
+    "auth/email-already-in-use":   "This email is already registered.",
     "auth/weak-password":          "Password must be at least 6 characters.",
-    "auth/too-many-requests":      "Too many attempts. Please try again later.",
+    "auth/too-many-requests":      "Too many attempts. Try again later.",
     "auth/network-request-failed": "Network error. Check your connection.",
     "auth/user-disabled":          "This account has been disabled."
-  };
-  return map[code] || "Something went wrong. Please try again.";
+  }[code] || "Something went wrong. Please try again.";
 }
