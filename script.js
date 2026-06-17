@@ -1,4 +1,6 @@
-// script.js — Expence Tracker
+// script.js — Expence Tracker v2.0
+// Complete Firebase v10 modular app
+
 import { auth, db } from "./firebase.js";
 import {
   createUserWithEmailAndPassword,
@@ -8,697 +10,872 @@ import {
   updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  collection, addDoc, deleteDoc, doc,
-  query, where, orderBy, getDocs, writeBatch, Timestamp
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  writeBatch,
+  serverTimestamp,
+  Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ────────────────────────────────────────
-// HELPERS - Define FIRST before any use
-// ────────────────────────────────────────
-function qs(sel) { 
-  return document.querySelector(sel); 
-}
+// ─────────────────────────────────────────────
+// APP STATE
+// ─────────────────────────────────────────────
+let currentUser   = null;
+let allExpenses   = [];      // All expenses for this user (sorted newest first)
+let calYear       = new Date().getFullYear();
+let calMonth      = new Date().getMonth();
+let isDarkMode    = localStorage.getItem("et_dark") === "true";
+let currentPage   = "home";
+let modalCallback = null;
 
-function fmtDate(d) { 
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; 
-}
+// ─────────────────────────────────────────────
+// INIT — Wait for Firebase Auth state
+// ─────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  // Apply saved dark mode immediately
+  applyDarkMode(isDarkMode, false);
 
-function fmtTime(d) {
-  let h = d.getHours(), m = d.getMinutes();
-  const ap = h >= 12 ? "PM" : "AM"; 
-  h = h % 12 || 12;
-  return `${pad(h)}:${pad(m)} ${ap}`;
-}
+  // Sync dark mode toggle in settings
+  const darkChk = document.getElementById("darkModeToggle");
+  if (darkChk) darkChk.checked = isDarkMode;
 
-function pad(n) { 
-  return String(n).padStart(2, "0"); 
-}
+  // Set summary date
+  setSummaryDate();
 
-function cap(s) { 
-  return s.charAt(0).toUpperCase() + s.slice(1); 
-}
+  // Auth state listener
+  onAuthStateChanged(auth, (user) => {
+    const splash = document.getElementById("splash");
 
-function esc(s) { 
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
-}
-
-let _toastT;
-function toast(msg) {
-  const t = qs("#toast");
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.remove("hide");
-  clearTimeout(_toastT);
-  _toastT = setTimeout(() => t.classList.add("hide"), 2800);
-}
-
-// ────────────────────────────────────────
-// STATE
-// ────────────────────────────────────────
-let user = null;
-let expenses = [];
-let calY, calM;
-let addingExpense = false;
-let deletingExpense = false;
-let dark = localStorage.getItem("et_dark") === "1";
-
-const now = new Date();
-calY = now.getFullYear();
-calM = now.getMonth();
-
-// ────────────────────────────────────────
-// BOOT
-// ────────────────────────────────────────
-applyTheme();
-setSummaryDate();
-
-onAuthStateChanged(auth, u => {
-  if (u) { 
-    user = u; 
-    bootApp(); 
-  } else { 
-    user = null; 
-    showAuth(); 
-  }
+    if (user) {
+      currentUser = user;
+      splash.classList.add("splash--hidden");
+      showScreen("app");
+      initApp();
+    } else {
+      currentUser = null;
+      allExpenses = [];
+      setTimeout(() => {
+        splash.classList.add("splash--hidden");
+        showScreen("auth");
+      }, 1200);
+    }
+  });
 });
 
-function bootApp() {
+// ─────────────────────────────────────────────
+// SCREEN MANAGEMENT
+// ─────────────────────────────────────────────
+function showScreen(screen) {
+  const authScreen = document.getElementById("authScreen");
+  const appScreen  = document.getElementById("appScreen");
+
+  if (screen === "auth") {
+    authScreen.classList.remove("d-none");
+    appScreen.classList.add("d-none");
+  } else {
+    authScreen.classList.add("d-none");
+    appScreen.classList.remove("d-none");
+  }
+}
+
+// ─────────────────────────────────────────────
+// INIT APP (after login)
+// ─────────────────────────────────────────────
+async function initApp() {
+  if (!currentUser) return;
+
+  const displayName = currentUser.displayName || currentUser.email.split("@")[0];
+  const email       = currentUser.email;
+
+  // Set user info across UI
+  setEl("sbUserName",       displayName);
+  setEl("sbUserEmail",      email);
+  setEl("settingsUserName", displayName);
+  setEl("settingsUserEmail",email);
+
+  // Apply saved default currency
+  const defCur = localStorage.getItem("et_currency") || "₹";
+  const curSel = document.getElementById("expCurrency");
+  if (curSel) curSel.value = defCur;
+  updateCurrencyBadge();
+
+  const setCurSel = document.getElementById("defaultCurrencySelect");
+  if (setCurSel) setCurSel.value = defCur;
+
+  // Load expenses from Firestore
+  await loadExpenses();
+
+  // Navigate to home
+  navigateTo("home");
+}
+
+// ─────────────────────────────────────────────
+// AUTH — Tab switcher
+// ─────────────────────────────────────────────
+window.showAuthTab = function(tab) {
+  document.getElementById("loginForm").classList.toggle("d-none", tab !== "login");
+  document.getElementById("signupForm").classList.toggle("d-none", tab !== "signup");
+  document.getElementById("tabLoginBtn").classList.toggle("auth-tab--active", tab === "login");
+  document.getElementById("tabSignupBtn").classList.toggle("auth-tab--active", tab !== "login");
+  setEl("loginError", "");
+  setEl("signupError", "");
+};
+
+// ─────────────────────────────────────────────
+// AUTH — Login
+// ─────────────────────────────────────────────
+window.handleLogin = async function() {
+  const email    = val("loginEmail").trim();
+  const password = val("loginPassword");
+
+  setEl("loginError", "");
+  if (!email || !password) { setEl("loginError", "Please fill in all fields."); return; }
+
+  setBtnLoading("loginBtn", "loginBtnText", "loginBtnSpinner", true);
+
   try {
-    const name = user.displayName || user.email.split("@")[0];
-    const sbName = qs("#sbName");
-    const sbEmail = qs("#sbEmail");
-    const suName = qs("#suName");
-    const suEmail = qs("#suEmail");
-    
-    if (sbName) sbName.textContent = name;
-    if (sbEmail) sbEmail.textContent = user.email;
-    if (suName) suName.textContent = name;
-    if (suEmail) suEmail.textContent = user.email;
-
-    const dc = localStorage.getItem("et_cur") || "₹";
-    const curSel = qs("#curSel");
-    const curBadge = qs("#curBadge");
-    const defCurSel = qs("#defCurSel");
-    
-    if (curSel) curSel.value = dc;
-    if (curBadge) curBadge.textContent = dc;
-    if (defCurSel) defCurSel.value = dc;
-
-    showApp();
-    goView("home");
-    loadExpenses();
-  } catch (e) {
-    console.error("bootApp error:", e);
-    toast("Error loading app");
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    setEl("loginError", getAuthError(err.code));
+    setBtnLoading("loginBtn", "loginBtnText", "loginBtnSpinner", false);
   }
-}
-
-function showAuth() {
-  const authScreen = qs("#authScreen");
-  const appScreen = qs("#appScreen");
-  if (authScreen) authScreen.classList.remove("hide");
-  if (appScreen) appScreen.classList.add("hide");
-}
-
-function showApp() {
-  const authScreen = qs("#authScreen");
-  const appScreen = qs("#appScreen");
-  if (authScreen) authScreen.classList.add("hide");
-  if (appScreen) appScreen.classList.remove("hide");
-}
-
-// ────────────────────────────────────────
-// AUTH
-// ────────────────────────────────────────
-window.switchTab = function(tab) {
-  const loginForm = qs("#loginForm");
-  const signupForm = qs("#signupForm");
-  const tabLogin = qs("#tabLogin");
-  const tabSignup = qs("#tabSignup");
-  
-  if (loginForm) loginForm.classList.toggle("hide", tab !== "login");
-  if (signupForm) signupForm.classList.toggle("hide", tab !== "signup");
-  if (tabLogin) tabLogin.classList.toggle("active", tab === "login");
-  if (tabSignup) tabSignup.classList.toggle("active", tab !== "login");
-  
-  const lErr = qs("#lErr");
-  const sErr = qs("#sErr");
-  if (lErr) lErr.textContent = "";
-  if (sErr) sErr.textContent = "";
 };
 
-window.doLogin = async function() {
-  const lEmail = qs("#lEmail");
-  const lPass = qs("#lPass");
-  const lErr = qs("#lErr");
-  
-  const email = lEmail?.value.trim() || "";
-  const pass = lPass?.value || "";
-  
-  if (lErr) lErr.textContent = "";
-  
-  if (!email || !pass) { 
-    if (lErr) lErr.textContent = "Please fill in all fields."; 
-    return; 
+// ─────────────────────────────────────────────
+// AUTH — Signup
+// ─────────────────────────────────────────────
+window.handleSignup = async function() {
+  const name     = val("signupName").trim();
+  const email    = val("signupEmail").trim();
+  const password = val("signupPassword");
+  const confirm  = val("signupConfirm");
+
+  setEl("signupError", "");
+
+  if (!name || !email || !password || !confirm) {
+    setEl("signupError", "Please fill in all fields."); return;
   }
-  
-  setAuthLoading("l", true);
+  if (password.length < 6) {
+    setEl("signupError", "Password must be at least 6 characters."); return;
+  }
+  if (password !== confirm) {
+    setEl("signupError", "Passwords do not match."); return;
+  }
+
+  setBtnLoading("signupBtn", "signupBtnText", "signupBtnSpinner", true);
+
   try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch (e) { 
-    if (lErr) lErr.textContent = authMsg(e.code); 
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(credential.user, { displayName: name });
+  } catch (err) {
+    setEl("signupError", getAuthError(err.code));
+    setBtnLoading("signupBtn", "signupBtnText", "signupBtnSpinner", false);
   }
-  setAuthLoading("l", false);
 };
 
-window.doSignup = async function() {
-  const sName = qs("#sName");
-  const sEmail = qs("#sEmail");
-  const sPass = qs("#sPass");
-  const sConf = qs("#sConf");
-  const sErr = qs("#sErr");
-  
-  const name = sName?.value.trim() || "";
-  const email = sEmail?.value.trim() || "";
-  const pass = sPass?.value || "";
-  const conf = sConf?.value || "";
-  
-  if (sErr) sErr.textContent = "";
-  
-  if (!name || !email || !pass || !conf) { 
-    if (sErr) sErr.textContent = "Please fill in all fields."; 
-    return; 
-  }
-  
-  if (pass.length < 6) { 
-    if (sErr) sErr.textContent = "Password must be at least 6 characters."; 
-    return; 
-  }
-  
-  if (pass !== conf) { 
-    if (sErr) sErr.textContent = "Passwords do not match."; 
-    return; 
-  }
-  
-  setAuthLoading("s", true);
+// ─────────────────────────────────────────────
+// AUTH — Logout
+// ─────────────────────────────────────────────
+window.handleLogout = async function() {
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    await updateProfile(cred.user, { displayName: name });
-  } catch (e) { 
-    if (sErr) sErr.textContent = authMsg(e.code); 
+    await signOut(auth);
+    allExpenses = [];
+    showToast("Logged out successfully");
+    closeSidebar();
+  } catch (err) {
+    showToast("Logout failed. Try again.");
   }
-  setAuthLoading("s", false);
 };
 
-window.doLogout = async function() {
-  await signOut(auth);
-  expenses = [];
-  toast("Logged out successfully");
-};
-
-window.eyeToggle = function(id, btn) {
-  const inp = qs("#" + id);
-  if (!inp) return;
-  const show = inp.type === "password";
-  inp.type = show ? "text" : "password";
-  btn.innerHTML = `<i class="fas fa-eye${show ? "" : "-slash"}"></i>`;
-};
-
-function setAuthLoading(prefix, on) {
-  const btnTxt = qs("#" + prefix + "BtnTxt");
-  const spin = qs("#" + prefix + "Spin");
-  const btn = qs("#" + prefix + "Btn");
-  
-  if (btnTxt) btnTxt.classList.toggle("hide", on);
-  if (spin) spin.classList.toggle("hide", !on);
-  if (btn) btn.disabled = on;
-}
-
-function authMsg(code) {
-  const m = {
-    "auth/user-not-found": "No account found with this email.",
-    "auth/wrong-password": "Incorrect password.",
-    "auth/invalid-credential": "Invalid email or password.",
-    "auth/email-already-in-use": "This email is already registered.",
-    "auth/invalid-email": "Please enter a valid email address.",
-    "auth/weak-password": "Password must be at least 6 characters.",
-    "auth/too-many-requests": "Too many attempts. Try again later."
-  };
-  return m[code] || "Something went wrong. Please try again.";
-}
-
-// ────────────────────────────────────────
-// EXPENSES — FIRESTORE
-// ────────────────────────────────────────
+// ─────────────────────────────────────────────
+// FIRESTORE — Load all expenses for current user
+// ─────────────────────────────────────────────
 async function loadExpenses() {
-  if (!user) return;
+  if (!currentUser) return;
+
   try {
+    // Path: expenses collection, filtered by uid, ordered by timestamp desc
     const q = query(
       collection(db, "expenses"),
-      where("uid", "==", user.uid),
-      orderBy("ts", "desc")
+      where("uid", "==", currentUser.uid),
+      orderBy("timestamp", "desc")
     );
-    const snap = await getDocs(q);
-    expenses = snap.docs.map(d => {
-      const data = d.data();
-      return {
-        id: d.id,
-        uid: data.uid || "",
-        name: data.name || "",
-        amount: parseFloat(data.amount) || 0,
-        currency: data.currency || "₹",
-        date: data.date || "",
-        time: data.time || "",
-        ts: data.ts || Timestamp.now()
-      };
-    });
-    refresh();
-  } catch (e) {
-    console.error("loadExpenses error:", e);
-    toast("Failed to load expenses");
+    const snapshot = await getDocs(q);
+    allExpenses = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    }));
+  } catch (err) {
+    console.error("Load expenses error:", err);
+    // If index error, try without orderBy
+    try {
+      const q2 = query(
+        collection(db, "expenses"),
+        where("uid", "==", currentUser.uid)
+      );
+      const snap2 = await getDocs(q2);
+      allExpenses = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort client-side
+      allExpenses.sort((a, b) => {
+        const ta = a.timestamp?.seconds || 0;
+        const tb = b.timestamp?.seconds || 0;
+        return tb - ta;
+      });
+    } catch (err2) {
+      console.error("Load expenses fallback error:", err2);
+      showToast("Could not load expenses.");
+    }
   }
+
+  renderAll();
 }
 
-window.doAddExpense = async function(event) {
-  if (event?.preventDefault) event.preventDefault();
-  if (addingExpense) return;
-  if (!user) {
-    toast("Please sign in first");
-    return;
-  }
+// ─────────────────────────────────────────────
+// EXPENSE — Add
+// ─────────────────────────────────────────────
+window.handleAddExpense = async function() {
+  const name     = val("expName").trim();
+  const amountRaw= val("expAmount");
+  const currency = val("expCurrency");
+  const amount   = parseFloat(amountRaw);
 
-  const expName = qs("#expName");
-  const expAmt = qs("#expAmt");
-  const curSel = qs("#curSel");
-  const addErr = qs("#addErr");
-  
-  const name = expName?.value.trim() || "";
-  const amtStr = expAmt?.value || "";
-  const amount = parseFloat(amtStr);
-  const cur = curSel?.value || "₹";
+  setEl("addExpenseError", "");
 
-  if (addErr) addErr.textContent = "";
+  if (!name)               { setEl("addExpenseError", "Please enter an expense name."); return; }
+  if (isNaN(amount) || amount < 0) { setEl("addExpenseError", "Please enter a valid amount."); return; }
 
-  if (!name) {
-    if (addErr) addErr.textContent = "Enter an expense name.";
-    return;
-  }
-  
-  if (!amtStr || isNaN(amount) || amount <= 0) {
-    if (addErr) addErr.textContent = "Enter a valid amount greater than 0.";
-    return;
-  }
-
-  addingExpense = true;
-  const addBtnTxt = qs("#addBtnTxt");
-  const addSpin = qs("#addSpin");
-  const addBtn = qs("#addBtn");
-  
-  if (addBtnTxt) addBtnTxt.classList.add("hide");
-  if (addSpin) addSpin.classList.remove("hide");
-  if (addBtn) addBtn.disabled = true;
+  setBtnLoading("addExpenseBtn", "addBtnText", "addBtnSpinner", true);
 
   try {
-    const ts = Timestamp.now();
-    const d = ts.toDate();
-    const exp = {
-      uid: user.uid,
-      name,
-      amount,
-      currency: cur,
-      date: fmtDate(d),
-      time: fmtTime(d),
-      ts
+    const now     = new Date();
+    const dateStr = formatDate(now);
+    const timeStr = formatTime(now);
+    const ts      = Timestamp.fromDate(now);
+
+    const expenseData = {
+      uid:       currentUser.uid,
+      name:      name,
+      amount:    amount,
+      currency:  currency,
+      date:      dateStr,
+      time:      timeStr,
+      timestamp: ts
     };
-    
-    const ref = await addDoc(collection(db, "expenses"), exp);
-    expenses.unshift({ id: ref.id, ...exp });
-    
-    if (expName) expName.value = "";
-    if (expAmt) expAmt.value = "";
-    
-    refresh();
-    toast("Expense added ✓");
-  } catch (e) {
-    console.error("doAddExpense error:", e);
-    if (addErr) addErr.textContent = "Failed to add. Please try again.";
-  } finally {
-    addingExpense = false;
-    if (addBtnTxt) addBtnTxt.classList.remove("hide");
-    if (addSpin) addSpin.classList.add("hide");
-    if (addBtn) addBtn.disabled = false;
+
+    const docRef = await addDoc(collection(db, "expenses"), expenseData);
+
+    // Insert at front of local array (newest first)
+    allExpenses.unshift({ id: docRef.id, ...expenseData });
+
+    // Clear form
+    document.getElementById("expName").value   = "";
+    document.getElementById("expAmount").value = "";
+
+    renderAll();
+    showToast("Expense added successfully ✓");
+  } catch (err) {
+    console.error("Add expense error:", err);
+    setEl("addExpenseError", "Failed to add expense. Please try again.");
   }
+
+  setBtnLoading("addExpenseBtn", "addBtnText", "addBtnSpinner", false);
 };
 
-window.doDeleteExpense = async function(expenseId) {
-  if (deletingExpense) return;
-  
-  if (!confirm("Delete this expense?")) return;
-  
-  deletingExpense = true;
-  try {
-    await deleteDoc(doc(db, "expenses", expenseId));
-    expenses = expenses.filter(e => e.id !== expenseId);
-    refresh();
-    toast("Expense deleted ✓");
-  } catch (e) { 
-    console.error("doDeleteExpense error:", e);
-    toast("Failed to delete expense"); 
-  } finally {
-    deletingExpense = false;
-  }
+// ─────────────────────────────────────────────
+// EXPENSE — Delete single
+// ─────────────────────────────────────────────
+window.handleDeleteExpense = function(expenseId, expenseName) {
+  openConfirmModal(
+    "Delete Expense",
+    `Delete "${expenseName}"? This cannot be undone.`,
+    async () => {
+      try {
+        await deleteDoc(doc(db, "expenses", expenseId));
+        allExpenses = allExpenses.filter(e => e.id !== expenseId);
+        renderAll();
+        showToast("Expense deleted");
+      } catch (err) {
+        console.error("Delete error:", err);
+        showToast("Failed to delete. Try again.");
+      }
+    }
+  );
 };
 
-window.doClearAll = async function() {
-  if (!expenses.length) { 
-    toast("No expenses to clear"); 
-    return; 
+// ─────────────────────────────────────────────
+// EXPENSE — Clear All
+// ─────────────────────────────────────────────
+window.handleClearAll = function() {
+  if (!allExpenses.length) {
+    showToast("No expenses to clear.");
+    return;
   }
-  
-  if (!confirm("Clear ALL expenses? This cannot be undone.")) return;
-  
-  try {
-    const batch = writeBatch(db);
-    expenses.forEach(e => batch.delete(doc(db, "expenses", e.id)));
-    await batch.commit();
-    expenses = [];
-    refresh();
-    toast("All expenses cleared ✓");
-  } catch (e) { 
-    console.error("doClearAll error:", e);
-    toast("Failed to clear expenses"); 
-  }
+  openConfirmModal(
+    "Clear All Expenses",
+    "This will permanently delete ALL your expenses. This cannot be undone.",
+    async () => {
+      try {
+        const batch = writeBatch(db);
+        allExpenses.forEach(exp => {
+          batch.delete(doc(db, "expenses", exp.id));
+        });
+        await batch.commit();
+        allExpenses = [];
+        renderAll();
+        showToast("All expenses cleared");
+      } catch (err) {
+        console.error("Clear all error:", err);
+        showToast("Failed to clear. Try again.");
+      }
+    }
+  );
 };
 
-// ────────────────────────────────────────
-// REFRESH — call after any data change
-// ────────────────────────────────────────
-function refresh() {
+// ─────────────────────────────────────────────
+// RENDER — All views
+// ─────────────────────────────────────────────
+function renderAll() {
   renderSummary();
   renderHistory();
   renderStats();
   renderCalendar();
 }
 
-// ────────────────────────────────────────
-// SUMMARY
-// ────────────────────────────────────────
+// ─────────────────────────────────────────────
+// RENDER — Summary Card
+// ─────────────────────────────────────────────
 function renderSummary() {
-  const td = fmtDate(new Date());
-  const tde = expenses.filter(e => e.date === td);
-  const tot = tde.reduce((s, e) => s + (e.amount || 0), 0);
-  const cur = tde[0]?.currency || qs("#curSel")?.value || "₹";
-  
-  const todayTotal = qs("#todayTotal");
-  const todayCount = qs("#todayCount");
-  
-  if (todayTotal) todayTotal.textContent = `${cur} ${tot.toFixed(2)}`;
-  if (todayCount) todayCount.textContent = tde.length;
+  const todayStr  = formatDate(new Date());
+  const todayExps = allExpenses.filter(e => e.date === todayStr);
+  const total     = todayExps.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  // Use the most recent currency for display, or default
+  const currency = todayExps.length ? todayExps[0].currency : (val("expCurrency") || "₹");
+
+  setEl("todayTotal", `${currency} ${total.toFixed(2)}`);
+  setEl("todayCount", todayExps.length);
 }
 
-function setSummaryDate() {
-  const d = new Date();
-  const scDate = qs("#scDate");
-  const scDay = qs("#scDay");
-  
-  if (scDate) scDate.textContent = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  if (scDay) scDay.textContent = d.toLocaleDateString("en-IN", { weekday: "long" });
-}
-
-// ────────────────────────────────────────
-// HISTORY
-// ────────────────────────────────────────
+// ─────────────────────────────────────────────
+// RENDER — Expense History
+// ─────────────────────────────────────────────
 window.renderHistory = function() {
-  const searchInp = qs("#searchInp");
-  const historyList = qs("#historyList");
-  
-  if (!historyList) return;
+  const container  = document.getElementById("historyContainer");
+  const searchTerm = (val("searchInput") || "").toLowerCase().trim();
 
-  const search = (searchInp?.value || "").toLowerCase().trim();
+  // Filter by search
+  let expenses = allExpenses;
+  if (searchTerm) {
+    expenses = expenses.filter(e =>
+      e.name.toLowerCase().includes(searchTerm) ||
+      String(e.amount).includes(searchTerm)
+    );
+  }
 
-  let filtered = expenses.filter(e =>
-    !search ||
-    e.name.toLowerCase().includes(search) ||
-    String(e.amount).includes(search) ||
-    (e.date || "").includes(search)
-  );
-
-  if (!filtered.length) {
-    historyList.innerHTML = `<div class="empty-msg">
-      <i class="fas fa-receipt"></i>
-      <p>${search ? "No matching expenses found." : "No expenses yet.<br/>Add your first expense above!"}</p>
-    </div>`;
+  if (!expenses.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-receipt"></i>
+        <p>${searchTerm
+          ? `No expenses found for "${searchTerm}"`
+          : "No expenses yet.<br/>Add your first expense above!"
+        }</p>
+      </div>`;
     return;
   }
 
+  // Group by date
   const groups = {};
-  filtered.forEach(e => { 
+  expenses.forEach(e => {
     if (!groups[e.date]) groups[e.date] = [];
     groups[e.date].push(e);
   });
 
-  const today = fmtDate(new Date());
-  const yesterday = fmtDate(new Date(Date.now() - 86400000));
+  // Sort dates descending
+  const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
-  historyList.innerHTML = Object.entries(groups).map(([date, items]) => {
-    const total = items.reduce((s, e) => s + (e.amount || 0), 0);
-    const cur = items[0]?.currency || "₹";
-    let lbl = date, sub = "";
-    
-    if (date === today) { 
-      lbl = "TODAY"; 
-      sub = `• ${date}`; 
-    } else if (date === yesterday) { 
-      lbl = "YESTERDAY"; 
-      sub = `• ${date}`; 
+  const todayStr     = formatDate(new Date());
+  const yesterdayStr = formatDate(new Date(Date.now() - 86400000));
+
+  let html = "";
+
+  sortedDates.forEach(dateStr => {
+    const items    = groups[dateStr];
+    const total    = items.reduce((s, e) => s + (e.amount || 0), 0);
+    const currency = items[0]?.currency || "₹";
+
+    let groupName = dateStr;
+    let groupSub  = dateStr;
+    if (dateStr === todayStr) {
+      groupName = "TODAY";
+      groupSub  = `• ${dateStr}`;
+    } else if (dateStr === yesterdayStr) {
+      groupName = "YESTERDAY";
+      groupSub  = `• ${dateStr}`;
     }
 
-    return `
-    <div class="exp-group">
-      <div class="grp-head" onclick="toggleGroup(this)">
-        <span class="grp-date">${lbl}<small>${sub}</small></span>
-        <div class="grp-right">
-          <span class="grp-total">Total: ${cur} ${total.toFixed(2)}</span>
-          <span class="grp-cnt">${items.length} Expense${items.length > 1 ? "s" : ""}</span>
-          <i class="fas fa-chevron-up grp-arrow open"></i>
+    const groupId = `group_${dateStr.replace(/-/g, "")}`;
+
+    html += `
+    <div class="day-group">
+      <div class="day-group-header" onclick="toggleDayGroup('${groupId}')">
+        <div class="day-group-left">
+          <span class="day-group-name">${groupName}</span>
+          <span class="day-group-date">${groupSub}</span>
+        </div>
+        <div class="day-group-right">
+          <span class="day-group-total">Total: ${currency} ${total.toFixed(2)}</span>
+          <span class="day-group-badge">${items.length} Expense${items.length !== 1 ? "s" : ""}</span>
+          <i class="fas fa-chevron-up day-group-arrow day-group-arrow--up" id="${groupId}_arrow"></i>
         </div>
       </div>
-      <div class="grp-body">
-        ${items.map((e, i) => `
-        <div class="exp-row">
-          <span class="exp-dot"></span>
-          <div class="exp-num">${i + 1}</div>
-          <div class="exp-info">
-            <div class="exp-name">${esc(e.name)}</div>
-            <div class="exp-time">${e.time || ""}</div>
+      <div class="day-group-items" id="${groupId}_items">
+        ${items.map((exp, idx) => `
+          <div class="expense-item">
+            <span class="item-dot"></span>
+            <div class="item-num">${idx + 1}</div>
+            <div class="item-info">
+              <div class="item-name">${escHtml(exp.name)}</div>
+              <div class="item-time">${exp.time || ""}</div>
+            </div>
+            <span class="item-amount">${exp.currency || "₹"} ${(exp.amount || 0).toFixed(2)}</span>
+            <button
+              class="item-delete-btn"
+              onclick="handleDeleteExpense('${exp.id}', '${escHtml(exp.name)}')"
+              title="Delete"
+            >
+              <i class="fas fa-trash"></i>
+            </button>
           </div>
-          <span class="exp-amount">${e.currency || "₹"} ${(e.amount || 0).toFixed(2)}</span>
-          <button class="del-btn" type="button" onclick="doDeleteExpense('${e.id}')"><i class="fas fa-trash"></i></button>
-        </div>`).join("")}
+        `).join("")}
       </div>
     </div>`;
-  }).join("");
+  });
+
+  container.innerHTML = html;
 };
 
-window.toggleGroup = function(head) {
-  const body = head.nextElementSibling;
-  const arrow = head.querySelector(".grp-arrow");
-  
-  if (!body || !arrow) return;
-  
-  const open = arrow.classList.contains("open");
-  body.style.display = open ? "none" : "flex";
-  arrow.classList.toggle("open", !open);
+// Toggle day group collapse
+window.toggleDayGroup = function(groupId) {
+  const items = document.getElementById(`${groupId}_items`);
+  const arrow = document.getElementById(`${groupId}_arrow`);
+  if (!items || !arrow) return;
+
+  const isOpen = !items.classList.contains("d-none");
+  if (isOpen) {
+    items.classList.add("d-none");
+    arrow.classList.remove("day-group-arrow--up");
+    arrow.classList.add("day-group-arrow--down");
+  } else {
+    items.classList.remove("d-none");
+    arrow.classList.add("day-group-arrow--up");
+    arrow.classList.remove("day-group-arrow--down");
+  }
 };
 
-// ────────────────────────────────────────
-// STATS
-// ────────────────────────────────────────
+// ─────────────────────────────────────────────
+// RENDER — Stats Page
+// ─────────────────────────────────────────────
 function renderStats() {
-  const today = fmtDate(new Date());
-  const moStart = today.slice(0, 7);
-  const cur = expenses[0]?.currency || "₹";
+  if (currentPage !== "stats") return;
 
-  const todayExp = expenses.filter(e => e.date === today);
-  const monthExp = expenses.filter(e => (e.date || "").startsWith(moStart));
-  const totalAll = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const totalToday = todayExp.reduce((s, e) => s + (e.amount || 0), 0);
-  const totalMonth = monthExp.reduce((s, e) => s + (e.amount || 0), 0);
-  const uniqDays = new Set(expenses.map(e => e.date)).size || 1;
-  const avgDay = totalAll / uniqDays;
+  const todayStr   = formatDate(new Date());
+  const monthStr   = todayStr.slice(0, 7); // YYYY-MM
+  const currency   = allExpenses[0]?.currency || "₹";
 
-  const statsCards = qs("#statsCards");
-  if (statsCards) {
-    statsCards.innerHTML = `
-      <div class="stat-card"><div class="stc-label">TODAY</div><div class="stc-val">${cur} ${totalToday.toFixed(0)}</div><div class="stc-sub">${todayExp.length} expense${todayExp.length !== 1 ? "s" : ""}</div></div>
-      <div class="stat-card"><div class="stc-label">THIS MONTH</div><div class="stc-val">${cur} ${totalMonth.toFixed(0)}</div><div class="stc-sub">${monthExp.length} expense${monthExp.length !== 1 ? "s" : ""}</div></div>
-      <div class="stat-card"><div class="stc-label">ALL TIME</div><div class="stc-val">${cur} ${totalAll.toFixed(0)}</div><div class="stc-sub">${expenses.length} total</div></div>
-      <div class="stat-card"><div class="stc-label">DAILY AVG</div><div class="stc-val">${cur} ${avgDay.toFixed(0)}</div><div class="stc-sub">per active day</div></div>
-    `;
-  }
+  const todayExps  = allExpenses.filter(e => e.date === todayStr);
+  const monthExps  = allExpenses.filter(e => (e.date || "").startsWith(monthStr));
 
-  const days = [];
+  const todayTotal = todayExps.reduce((s, e) => s + (e.amount || 0), 0);
+  const monthTotal = monthExps.reduce((s, e) => s + (e.amount || 0), 0);
+  const allTotal   = allExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const uniqueDays = new Set(allExpenses.map(e => e.date)).size || 1;
+  const dailyAvg   = allTotal / uniqueDays;
+
+  document.getElementById("statsCardsGrid").innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">TODAY</div>
+      <div class="stat-value">${currency} ${todayTotal.toFixed(0)}</div>
+      <div class="stat-sub">${todayExps.length} expense${todayExps.length !== 1 ? "s" : ""}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">THIS MONTH</div>
+      <div class="stat-value">${currency} ${monthTotal.toFixed(0)}</div>
+      <div class="stat-sub">${monthExps.length} expense${monthExps.length !== 1 ? "s" : ""}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ALL TIME</div>
+      <div class="stat-value">${currency} ${allTotal.toFixed(0)}</div>
+      <div class="stat-sub">${allExpenses.length} total expenses</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">DAILY AVG</div>
+      <div class="stat-value">${currency} ${dailyAvg.toFixed(0)}</div>
+      <div class="stat-sub">per active day</div>
+    </div>
+  `;
+
+  // Bar chart — last 7 days
+  const bars = [];
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000);
-    const ds = fmtDate(d);
-    const sum = expenses.filter(e => e.date === ds).reduce((s, e) => s + (e.amount || 0), 0);
-    days.push({ lbl: d.toLocaleDateString("en", { weekday: "short" }).slice(0, 2), sum });
+    const d     = new Date(Date.now() - i * 86400000);
+    const dStr  = formatDate(d);
+    const sum   = allExpenses.filter(e => e.date === dStr).reduce((s, e) => s + (e.amount || 0), 0);
+    const day   = d.toLocaleDateString("en", { weekday: "short" }).slice(0, 2);
+    bars.push({ day, sum, isToday: dStr === todayStr });
   }
-  
-  const mx = Math.max(...days.map(d => d.sum), 1);
-  
-  const barChart = qs("#barChart");
-  if (barChart) {
-    barChart.innerHTML = days.map(d => `
-      <div class="bc-col">
-        <div class="bc-val">${d.sum > 0 ? d.sum.toFixed(0) : ""}</div>
-        <div class="bc-bar" style="height:${Math.max((d.sum / mx) * 80, d.sum > 0 ? 4 : 0)}px"></div>
-        <div class="bc-day">${d.lbl}</div>
-      </div>`).join("");
-  }
+  const maxSum = Math.max(...bars.map(b => b.sum), 1);
 
-  const top5 = [...expenses].sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 5);
-  const topList = qs("#topList");
-  
-  if (topList) {
-    topList.innerHTML = top5.length
-      ? top5.map(e => `<div class="top-item"><span class="top-name">${esc(e.name)}</span><span class="top-amt">${e.currency || "₹"} ${(e.amount || 0).toFixed(2)}</span></div>`).join("")
-      : `<p style="font-size:12px;color:var(--txt3)">No expenses yet.</p>`;
+  document.getElementById("barChart").innerHTML = bars.map(b => `
+    <div class="bar-col">
+      <div class="bar-amount">${b.sum > 0 ? b.sum.toFixed(0) : ""}</div>
+      <div
+        class="bar-fill${b.isToday ? " bar-fill--today" : ""}"
+        style="height:${Math.max((b.sum / maxSum) * 90, b.sum > 0 ? 4 : 0)}px"
+      ></div>
+      <div class="bar-day">${b.day}</div>
+    </div>
+  `).join("");
+
+  // Top 5 expenses (by amount)
+  const sorted   = [...allExpenses].sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 5);
+  const topEl    = document.getElementById("topExpenses");
+  if (!sorted.length) {
+    topEl.innerHTML = `<p style="font-size:13px;color:var(--text-muted);padding:12px 0">No expenses yet.</p>`;
+  } else {
+    topEl.innerHTML = sorted.map((e, i) => `
+      <div class="top-expense-item">
+        <div class="top-expense-rank">${i + 1}</div>
+        <div class="top-expense-name">${escHtml(e.name)}</div>
+        <div class="top-expense-amount">${e.currency || currency} ${(e.amount || 0).toFixed(2)}</div>
+      </div>
+    `).join("");
   }
 }
 
-// ────────────────────────────────────────
-// CALENDAR
-// ────────────────────────────────────────
-window.calShift = function(d) {
-  calM += d;
-  if (calM > 11) { calM = 0; calY++; }
-  if (calM < 0) { calM = 11; calY--; }
+// ─────────────────────────────────────────────
+// RENDER — Calendar
+// ─────────────────────────────────────────────
+function renderCalendar() {
+  if (currentPage !== "calendar") return;
+
+  const labelEl = document.getElementById("calMonthLabel");
+  if (labelEl) {
+    labelEl.textContent = new Date(calYear, calMonth, 1)
+      .toLocaleDateString("en", { month: "long", year: "numeric" });
+  }
+
+  const gridEl = document.getElementById("calendarGrid");
+  if (!gridEl) return;
+
+  const firstDay     = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth  = new Date(calYear, calMonth + 1, 0).getDate();
+  const todayStr     = formatDate(new Date());
+  const expDates     = new Set(allExpenses.map(e => e.date));
+
+  const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+  let html = `<div class="cal-weekdays-row">`;
+  weekdays.forEach(d => {
+    html += `<div class="cal-weekday-cell">${d}</div>`;
+  });
+  html += `</div><div class="cal-days-grid">`;
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    html += `<div class="cal-day-cell cal-day-cell--empty"></div>`;
+  }
+
+  // Day cells
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr  = `${calYear}-${pad(calMonth + 1)}-${pad(d)}`;
+    const isToday  = dateStr === todayStr;
+    const hasExp   = expDates.has(dateStr);
+
+    let cls = "cal-day-cell";
+    if (isToday) cls += " cal-day-cell--today";
+    if (hasExp)  cls += " cal-day-cell--has-expense";
+
+    html += `<div class="${cls}" onclick="showCalendarDay('${dateStr}')">${d}</div>`;
+  }
+
+  html += `</div>`;
+  gridEl.innerHTML = html;
+}
+
+// Calendar — show day detail
+window.showCalendarDay = function(dateStr) {
+  const detailEl = document.getElementById("calDayDetail");
+  if (!detailEl) return;
+
+  const dayExps = allExpenses.filter(e => e.date === dateStr);
+
+  if (!dayExps.length) {
+    detailEl.innerHTML = `<div class="cal-day-detail-title">${dateStr} — No expenses</div>`;
+    detailEl.classList.remove("d-none");
+    return;
+  }
+
+  const total    = dayExps.reduce((s, e) => s + (e.amount || 0), 0);
+  const currency = dayExps[0]?.currency || "₹";
+
+  let html = `<div class="cal-day-detail-title">${dateStr} — Total: ${currency} ${total.toFixed(2)}</div>`;
+  dayExps.forEach(e => {
+    html += `
+      <div class="cal-detail-item">
+        <span class="cal-detail-name">${escHtml(e.name)}</span>
+        <span class="cal-detail-amount">${e.currency || currency} ${(e.amount || 0).toFixed(2)}</span>
+      </div>`;
+  });
+
+  detailEl.innerHTML = html;
+  detailEl.classList.remove("d-none");
+};
+
+// Calendar — change month
+window.calendarChangeMonth = function(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+
+  // Hide day detail when navigating months
+  const detailEl = document.getElementById("calDayDetail");
+  if (detailEl) detailEl.classList.add("d-none");
+
   renderCalendar();
 };
 
-function renderCalendar() {
-  const lbl = new Date(calY, calM, 1).toLocaleDateString("en", { month: "long", year: "numeric" });
-  const calLabel = qs("#calLabel");
-  if (calLabel) calLabel.textContent = lbl;
+// ─────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────
+window.navigateTo = function(page) {
+  currentPage = page;
 
-  const calGrid = qs("#calGrid");
-  if (!calGrid) return;
-  
-  const calWeeks = qs("#calWeeks");
-  if (calWeeks) calWeeks.innerHTML = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => `<div class="cal-wday">${d}</div>`).join("");
+  // Pages
+  const pages = ["home", "stats", "calendar", "settings"];
+  pages.forEach(p => {
+    const el = document.getElementById(`${p}Page`);
+    if (el) el.classList.toggle("page--active", p === page);
+  });
 
-  const first = new Date(calY, calM, 1).getDay();
-  const days = new Date(calY, calM + 1, 0).getDate();
-  const today = fmtDate(new Date());
-  const expDates = new Set(expenses.map(e => e.date));
+  // Nav buttons
+  pages.forEach(p => {
+    const btn = document.getElementById(`nav${capitalize(p)}`);
+    if (btn) btn.classList.toggle("nav-btn--active", p === page);
+  });
 
-  let html = "";
-  for (let i = 0; i < first; i++) html += `<div class="cal-cell blank"></div>`;
-  for (let d = 1; d <= days; d++) {
-    const ds = `${calY}-${pad(calM + 1)}-${pad(d)}`;
-    const isT = ds === today;
-    const hasE = expDates.has(ds);
-    html += `<div class="cal-cell${isT ? " today" : ""}${hasE ? " has-exp" : ""}" onclick="showCalDay('${ds}')">${d}</div>`;
-  }
-  calGrid.innerHTML = html;
-}
+  // Sidebar active state
+  document.querySelectorAll(".sb-nav-item").forEach((btn, i) => {
+    btn.classList.toggle("sb-nav-item--active", i === pages.indexOf(page));
+  });
 
-window.showCalDay = function(date) {
-  const calDetail = qs("#calDetail");
-  if (!calDetail) return;
-  
-  const items = expenses.filter(e => e.date === date);
-  
-  if (!items.length) {
-    calDetail.innerHTML = `<p class="cal-det-title">${date} — No expenses</p>`;
-  } else {
-    const tot = items.reduce((s, e) => s + (e.amount || 0), 0);
-    const cur = items[0]?.currency || "₹";
-    calDetail.innerHTML = `
-      <p class="cal-det-title">${date} — Total: ${cur} ${tot.toFixed(2)}</p>
-      ${items.map(e => `<div class="cal-det-row"><span>${esc(e.name)}</span><span class="cal-det-amt">${e.currency || cur} ${(e.amount || 0).toFixed(2)}</span></div>`).join("")}
-    `;
-  }
-  calDetail.classList.remove("hide");
+  // Render page-specific content
+  if (page === "stats")    renderStats();
+  if (page === "calendar") renderCalendar();
 };
 
-// ────────────────────────────────────────
-// VIEW / NAV
-// ────────────────────────────────────────
-window.goView = function(v) {
-  document.querySelectorAll(".view").forEach(el => el.classList.remove("active-view"));
-  document.querySelectorAll(".bn-btn").forEach(b => b.classList.remove("active"));
-  
-  const view = qs("#view" + cap(v));
-  const btn = qs("#bn" + cap(v));
-  
-  if (view) view.classList.add("active-view");
-  if (btn) btn.classList.add("active");
-  
-  if (v === "stats") renderStats();
-  if (v === "calendar") renderCalendar();
-};
-
-window.fabAction = function() {
-  goView("home");
+window.scrollToAddExpense = function() {
+  navigateTo("home");
   setTimeout(() => {
-    qs("#expName")?.focus();
-    qs(".card")?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, 80);
+    const card = document.querySelector(".section-card");
+    if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+    const input = document.getElementById("expName");
+    if (input) input.focus();
+  }, 100);
 };
 
-// ────────────────────────────────────────
+// ─────────────────────────────────────────────
 // SIDEBAR
-// ────────────────────────────────────────
+// ─────────────────────────────────────────────
 window.openSidebar = function() {
-  const sidebar = qs("#sidebar");
-  const sbOverlay = qs("#sbOverlay");
-  if (sidebar) sidebar.classList.remove("hide");
-  if (sbOverlay) sbOverlay.classList.remove("hide");
+  document.getElementById("sidebar").classList.remove("sidebar--closed");
+  document.getElementById("sidebar").classList.add("sidebar--open");
+  document.getElementById("sidebarOverlay").classList.remove("d-none");
 };
 
 window.closeSidebar = function() {
-  const sidebar = qs("#sidebar");
-  const sbOverlay = qs("#sbOverlay");
-  if (sidebar) sidebar.classList.add("hide");
-  if (sbOverlay) sbOverlay.classList.add("hide");
+  document.getElementById("sidebar").classList.add("sidebar--closed");
+  document.getElementById("sidebar").classList.remove("sidebar--open");
+  document.getElementById("sidebarOverlay").classList.add("d-none");
 };
 
-// ────────────────────────────────────────
-// THEME
-// ────────────────────────────────────────
-window.toggleTheme = function() {
-  dark = !dark;
-  localStorage.setItem("et_dark", dark ? "1" : "0");
-  applyTheme();
-  const darkChk = qs("#darkChk");
-  if (darkChk) darkChk.checked = dark;
+// ─────────────────────────────────────────────
+// DARK MODE
+// ─────────────────────────────────────────────
+window.toggleDarkMode = function() {
+  isDarkMode = !isDarkMode;
+  localStorage.setItem("et_dark", isDarkMode);
+  applyDarkMode(isDarkMode, true);
 };
 
-function applyTheme() {
-  document.body.toggleAttribute("data-dark", dark);
-  const themeBtn = qs("#themeBtn");
-  if (themeBtn) themeBtn.innerHTML = dark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-  const darkChk = qs("#darkChk");
-  if (darkChk) darkChk.checked = dark;
+window.handleDarkToggle = function() {
+  const chk  = document.getElementById("darkModeToggle");
+  isDarkMode = chk.checked;
+  localStorage.setItem("et_dark", isDarkMode);
+  applyDarkMode(isDarkMode, true);
+};
+
+function applyDarkMode(dark, syncToggle) {
+  document.body.classList.toggle("dark-mode", dark);
+
+  const icon = document.getElementById("themeIcon");
+  if (icon) {
+    icon.className = dark ? "fas fa-sun" : "fas fa-moon";
+  }
+
+  if (syncToggle) {
+    const chk = document.getElementById("darkModeToggle");
+    if (chk) chk.checked = dark;
+  }
 }
 
-// ────────────────────────────────────────
+// ─────────────────────────────────────────────
 // CURRENCY
-// ────────────────────────────────────────
-window.saveDefCur = function() {
-  const defCurSel = qs("#defCurSel");
-  const v = defCurSel?.value;
-  if (!v) return;
-  
-  localStorage.setItem("et_cur", v);
-  
-  const curSel = qs("#curSel");
-  const curBadge = qs("#curBadge");
-  
-  if (curSel) curSel.value = v;
-  if (curBadge) curBadge.textContent = v;
-  
-  toast("Default currency saved");
+// ─────────────────────────────────────────────
+window.updateCurrencyBadge = function() {
+  const cur = val("expCurrency") || "₹";
+  const badge = document.getElementById("currencyBadge");
+  if (badge) badge.textContent = cur;
 };
+
+window.saveDefaultCurrency = function() {
+  const cur = val("defaultCurrencySelect") || "₹";
+  localStorage.setItem("et_currency", cur);
+  const curSel = document.getElementById("expCurrency");
+  if (curSel) { curSel.value = cur; updateCurrencyBadge(); }
+  showToast("Default currency saved");
+};
+
+// ─────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────
+function openConfirmModal(title, message, onConfirm) {
+  setEl("modalTitle",   title);
+  setEl("modalMessage", message);
+  modalCallback = onConfirm;
+  document.getElementById("confirmModal").classList.remove("d-none");
+
+  const confirmBtn = document.getElementById("modalConfirmBtn");
+  confirmBtn.onclick = () => {
+    closeConfirmModal();
+    if (modalCallback) modalCallback();
+  };
+}
+
+window.closeConfirmModal = function() {
+  document.getElementById("confirmModal").classList.add("d-none");
+  modalCallback = null;
+};
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+let toastTimer = null;
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.remove("d-none");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.add("d-none");
+  }, 3000);
+}
+
+// ─────────────────────────────────────────────
+// PASSWORD TOGGLE
+// ─────────────────────────────────────────────
+window.togglePasswordVisibility = function(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isText = input.type === "text";
+  input.type   = isText ? "password" : "text";
+  const icon   = btn.querySelector("i");
+  if (icon) icon.className = isText ? "fas fa-eye-slash" : "fas fa-eye";
+};
+
+// ─────────────────────────────────────────────
+// DATE / TIME HELPERS
+// ─────────────────────────────────────────────
+function setSummaryDate() {
+  const d = new Date();
+  const dateEl = document.getElementById("summaryDate");
+  const dayEl  = document.getElementById("summaryWeekday");
+  if (dateEl) dateEl.textContent = d.toLocaleDateString("en-IN", {
+    day: "2-digit", month: "short", year: "numeric"
+  });
+  if (dayEl) dayEl.textContent = d.toLocaleDateString("en-IN", { weekday: "long" });
+}
+
+function formatDate(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function formatTime(d) {
+  let h    = d.getHours();
+  let m    = d.getMinutes();
+  const am = h >= 12 ? "PM" : "AM";
+  h        = h % 12 || 12;
+  return `${pad(h)}:${pad(m)} ${am}`;
+}
+
+function pad(n) { return String(n).padStart(2, "0"); }
+
+// ─────────────────────────────────────────────
+// DOM HELPERS
+// ─────────────────────────────────────────────
+function setEl(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : "";
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function setBtnLoading(btnId, textId, spinnerId, loading) {
+  const btn     = document.getElementById(btnId);
+  const text    = document.getElementById(textId);
+  const spinner = document.getElementById(spinnerId);
+  if (btn)     btn.disabled = loading;
+  if (text)    text.classList.toggle("d-none", loading);
+  if (spinner) spinner.classList.toggle("d-none", !loading);
+}
+
+// ─────────────────────────────────────────────
+// AUTH ERROR MESSAGES
+// ─────────────────────────────────────────────
+function getAuthError(code) {
+  const errors = {
+    "auth/user-not-found":       "No account found with this email.",
+    "auth/wrong-password":       "Incorrect password. Please try again.",
+    "auth/invalid-credential":   "Invalid email or password.",
+    "auth/invalid-email":        "Please enter a valid email address.",
+    "auth/email-already-in-use": "An account with this email already exists.",
+    "auth/weak-password":        "Password must be at least 6 characters.",
+    "auth/too-many-requests":    "Too many attempts. Please try again later.",
+    "auth/network-request-failed": "Network error. Check your connection.",
+    "auth/user-disabled":        "This account has been disabled."
+  };
+  return errors[code] || "Something went wrong. Please try again.";
+}
