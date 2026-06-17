@@ -1,528 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Expence Tracker</title>
-  <meta name="description" content="Track your daily expenses with ease. A beautiful, secure expense tracker." />
-  <link rel="icon" type="image/png" href="logo.png" />
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <!-- App Styles -->
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Expence Tracker</title>
+<link rel="icon" href="logo.png"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
 </head>
-<body class="light-mode">
+<body>
 
-<!-- ══════════════════════════════════════════════
-     SPLASH / LOADING SCREEN
-══════════════════════════════════════════════ -->
+<!-- SPLASH -->
 <div id="splash" class="splash">
-  <div class="splash-inner">
-    <img src="logo.png" alt="Expence Tracker" class="splash-logo" />
-    <div class="splash-title">EXPENCE</div>
+  <div class="splash-box">
+    <img src="logo.png" class="splash-logo" alt="logo"/>
+    <div class="splash-name">EXPENCE</div>
     <div class="splash-sub">— TRACKER —</div>
-    <div class="splash-spinner">
-      <div class="spinner-ring"></div>
+    <div class="splash-ring"></div>
+  </div>
+</div>
+
+<!-- ═══ AUTH SCREEN ═══ -->
+<div id="authScreen" class="hidden">
+  <div class="auth-page">
+    <div class="auth-brand">
+      <img src="logo.png" class="auth-brand-logo" alt="logo"/>
+      <div>
+        <div class="auth-brand-title">EXPENCE</div>
+        <div class="auth-brand-sub">— TRACKER —</div>
+      </div>
+    </div>
+
+    <div class="auth-card">
+      <!-- Tab row -->
+      <div class="auth-tabs">
+        <button id="tabLogin"  class="auth-tab active" onclick="switchTab('login')">Login</button>
+        <button id="tabSignup" class="auth-tab"        onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="loginBox">
+        <p class="auth-heading">Welcome Back 👋</p>
+        <p class="auth-desc">Sign in to your account</p>
+
+        <div class="fld">
+          <label>Email</label>
+          <div class="fld-row"><i class="fas fa-envelope"></i>
+            <input id="liEmail" type="email" placeholder="Enter your email"/>
+          </div>
+        </div>
+        <div class="fld">
+          <label>Password</label>
+          <div class="fld-row"><i class="fas fa-lock"></i>
+            <input id="liPass" type="password" placeholder="Enter your password"/>
+            <button class="eye" onclick="toggleEye('liPass',this)"><i class="fas fa-eye-slash"></i></button>
+          </div>
+        </div>
+        <div id="liErr" class="err-msg"></div>
+        <button class="btn-gold w100" id="liBtn" onclick="doLogin()">
+          <span id="liTxt"><i class="fas fa-sign-in-alt"></i> Login</span>
+          <span id="liSpin" class="spin hidden"></span>
+        </button>
+      </div>
+
+      <!-- SIGNUP -->
+      <div id="signupBox" class="hidden">
+        <p class="auth-heading">Create Account ✨</p>
+        <p class="auth-desc">Start tracking your expenses</p>
+
+        <div class="fld">
+          <label>Full Name</label>
+          <div class="fld-row"><i class="fas fa-user"></i>
+            <input id="suName" type="text" placeholder="Enter your full name"/>
+          </div>
+        </div>
+        <div class="fld">
+          <label>Email</label>
+          <div class="fld-row"><i class="fas fa-envelope"></i>
+            <input id="suEmail" type="email" placeholder="Enter your email"/>
+          </div>
+        </div>
+        <div class="fld">
+          <label>Password</label>
+          <div class="fld-row"><i class="fas fa-lock"></i>
+            <input id="suPass" type="password" placeholder="Minimum 6 characters"/>
+            <button class="eye" onclick="toggleEye('suPass',this)"><i class="fas fa-eye-slash"></i></button>
+          </div>
+        </div>
+        <div class="fld">
+          <label>Confirm Password</label>
+          <div class="fld-row"><i class="fas fa-lock"></i>
+            <input id="suConf" type="password" placeholder="Re-enter your password"/>
+            <button class="eye" onclick="toggleEye('suConf',this)"><i class="fas fa-eye-slash"></i></button>
+          </div>
+        </div>
+        <div id="suErr" class="err-msg"></div>
+        <button class="btn-gold w100" id="suBtn" onclick="doSignup()">
+          <span id="suTxt"><i class="fas fa-user-plus"></i> Create Account</span>
+          <span id="suSpin" class="spin hidden"></span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     AUTH SCREEN (Login / Signup)
-══════════════════════════════════════════════ -->
-<div id="authScreen" class="auth-screen d-none">
-  <div class="auth-wrapper">
+<!-- ═══ MAIN APP ═══ -->
+<div id="appScreen" class="hidden">
 
-    <!-- Brand -->
-    <div class="auth-brand">
-      <img src="logo.png" alt="Logo" class="auth-logo-img" />
-      <div class="auth-brand-name">
-        <span class="brand-expence">EXPENCE</span>
-        <span class="brand-tracker">— TRACKER —</span>
+  <!-- Sidebar overlay -->
+  <div id="sbOverlay" class="sb-overlay hidden" onclick="closeSB()"></div>
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar closed">
+    <div class="sb-user">
+      <div class="sb-av"><i class="fas fa-user"></i></div>
+      <div>
+        <div id="sbName"  class="sb-uname">User</div>
+        <div id="sbEmail" class="sb-uemail">email</div>
       </div>
     </div>
-
-    <!-- Card -->
-    <div class="auth-card">
-
-      <!-- Tab Switch -->
-      <div class="auth-tabs">
-        <button id="tabLoginBtn" class="auth-tab auth-tab--active" onclick="showAuthTab('login')">Login</button>
-        <button id="tabSignupBtn" class="auth-tab" onclick="showAuthTab('signup')">Sign Up</button>
-      </div>
-
-      <!-- ── LOGIN FORM ── -->
-      <div id="loginForm" class="auth-form">
-        <h2 class="auth-form-title">Welcome Back 👋</h2>
-        <p class="auth-form-desc">Sign in to continue tracking</p>
-
-        <div class="form-field">
-          <label class="field-label">Email Address</label>
-          <div class="field-input-wrap">
-            <i class="fas fa-envelope field-icon"></i>
-            <input
-              type="email"
-              id="loginEmail"
-              class="field-input"
-              placeholder="Enter your email"
-              autocomplete="email"
-            />
-          </div>
-        </div>
-
-        <div class="form-field">
-          <label class="field-label">Password</label>
-          <div class="field-input-wrap">
-            <i class="fas fa-lock field-icon"></i>
-            <input
-              type="password"
-              id="loginPassword"
-              class="field-input"
-              placeholder="Enter your password"
-              autocomplete="current-password"
-              onkeydown="if(event.key==='Enter') handleLogin()"
-            />
-            <button type="button" class="toggle-pw-btn" onclick="togglePasswordVisibility('loginPassword', this)">
-              <i class="fas fa-eye-slash"></i>
-            </button>
-          </div>
-        </div>
-
-        <div id="loginError" class="form-error"></div>
-
-        <button id="loginBtn" class="btn-primary btn-full" onclick="handleLogin()">
-          <span id="loginBtnText"><i class="fas fa-sign-in-alt"></i>&nbsp; Login</span>
-          <span id="loginBtnSpinner" class="btn-spinner d-none"></span>
-        </button>
-      </div>
-
-      <!-- ── SIGNUP FORM ── -->
-      <div id="signupForm" class="auth-form d-none">
-        <h2 class="auth-form-title">Create Account ✨</h2>
-        <p class="auth-form-desc">Start your expense journey today</p>
-
-        <div class="form-field">
-          <label class="field-label">Full Name</label>
-          <div class="field-input-wrap">
-            <i class="fas fa-user field-icon"></i>
-            <input
-              type="text"
-              id="signupName"
-              class="field-input"
-              placeholder="Enter your full name"
-              autocomplete="name"
-            />
-          </div>
-        </div>
-
-        <div class="form-field">
-          <label class="field-label">Email Address</label>
-          <div class="field-input-wrap">
-            <i class="fas fa-envelope field-icon"></i>
-            <input
-              type="email"
-              id="signupEmail"
-              class="field-input"
-              placeholder="Enter your email"
-              autocomplete="email"
-            />
-          </div>
-        </div>
-
-        <div class="form-field">
-          <label class="field-label">Password</label>
-          <div class="field-input-wrap">
-            <i class="fas fa-lock field-icon"></i>
-            <input
-              type="password"
-              id="signupPassword"
-              class="field-input"
-              placeholder="Minimum 6 characters"
-              autocomplete="new-password"
-            />
-            <button type="button" class="toggle-pw-btn" onclick="togglePasswordVisibility('signupPassword', this)">
-              <i class="fas fa-eye-slash"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="form-field">
-          <label class="field-label">Confirm Password</label>
-          <div class="field-input-wrap">
-            <i class="fas fa-lock field-icon"></i>
-            <input
-              type="password"
-              id="signupConfirm"
-              class="field-input"
-              placeholder="Re-enter your password"
-              autocomplete="new-password"
-              onkeydown="if(event.key==='Enter') handleSignup()"
-            />
-            <button type="button" class="toggle-pw-btn" onclick="togglePasswordVisibility('signupConfirm', this)">
-              <i class="fas fa-eye-slash"></i>
-            </button>
-          </div>
-        </div>
-
-        <div id="signupError" class="form-error"></div>
-
-        <button id="signupBtn" class="btn-primary btn-full" onclick="handleSignup()">
-          <span id="signupBtnText"><i class="fas fa-user-plus"></i>&nbsp; Create Account</span>
-          <span id="signupBtnSpinner" class="btn-spinner d-none"></span>
-        </button>
-      </div>
-
-    </div><!-- /auth-card -->
-  </div><!-- /auth-wrapper -->
-</div><!-- /authScreen -->
-
-
-<!-- ══════════════════════════════════════════════
-     MAIN APP
-══════════════════════════════════════════════ -->
-<div id="appScreen" class="app-screen d-none">
-
-  <!-- ── SIDEBAR OVERLAY ── -->
-  <div id="sidebarOverlay" class="sidebar-overlay d-none" onclick="closeSidebar()"></div>
-
-  <!-- ── SIDEBAR ── -->
-  <aside id="sidebar" class="sidebar sidebar--closed">
-    <div class="sb-header">
-      <div class="sb-avatar">
-        <i class="fas fa-user"></i>
-      </div>
-      <div class="sb-user-info">
-        <p id="sbUserName" class="sb-user-name">Loading...</p>
-        <p id="sbUserEmail" class="sb-user-email">...</p>
-      </div>
-    </div>
-
-    <nav class="sb-nav">
-      <button class="sb-nav-item sb-nav-item--active" onclick="navigateTo('home'); closeSidebar();">
-        <i class="fas fa-home"></i>
-        <span>Home</span>
-      </button>
-      <button class="sb-nav-item" onclick="navigateTo('stats'); closeSidebar();">
-        <i class="fas fa-chart-bar"></i>
-        <span>Stats</span>
-      </button>
-      <button class="sb-nav-item" onclick="navigateTo('calendar'); closeSidebar();">
-        <i class="fas fa-calendar-alt"></i>
-        <span>Calendar</span>
-      </button>
-      <button class="sb-nav-item" onclick="navigateTo('settings'); closeSidebar();">
-        <i class="fas fa-cog"></i>
-        <span>Settings</span>
-      </button>
+    <nav>
+      <button onclick="goPage('home');closeSB()"><i class="fas fa-home"></i> Home</button>
+      <button onclick="goPage('stats');closeSB()"><i class="fas fa-chart-bar"></i> Stats</button>
+      <button onclick="goPage('calendar');closeSB()"><i class="fas fa-calendar-alt"></i> Calendar</button>
+      <button onclick="goPage('settings');closeSB()"><i class="fas fa-cog"></i> Settings</button>
     </nav>
+    <button class="sb-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
 
-    <button class="sb-logout-btn" onclick="handleLogout()">
-      <i class="fas fa-sign-out-alt"></i>
-      <span>Logout</span>
-    </button>
-  </aside>
-
-  <!-- ── APP HEADER ── -->
-  <header class="app-header">
-    <button class="hdr-icon-btn" id="menuBtn" onclick="openSidebar()" aria-label="Menu">
-      <i class="fas fa-bars"></i>
-    </button>
-
+  <!-- Header -->
+  <header class="hdr">
+    <button class="hdr-btn" onclick="openSB()"><i class="fas fa-bars"></i></button>
     <div class="hdr-brand">
-      <img src="logo.png" alt="Logo" class="hdr-logo" />
-      <div class="hdr-title-wrap">
-        <span class="hdr-title-main">EXPENCE</span>
-        <span class="hdr-title-sub">— TRACKER —</span>
+      <img src="logo.png" class="hdr-logo" alt="logo"/>
+      <div>
+        <div class="hdr-title">EXPENCE</div>
+        <div class="hdr-sub">— TRACKER —</div>
       </div>
     </div>
-
-    <button class="hdr-icon-btn hdr-theme-btn" id="themeBtn" onclick="toggleDarkMode()" aria-label="Toggle theme">
-      <i class="fas fa-moon" id="themeIcon"></i>
-    </button>
+    <button class="hdr-btn" id="themeBtn" onclick="toggleTheme()"><i class="fas fa-moon" id="themeIco"></i></button>
   </header>
 
-  <!-- ── PAGES WRAPPER ── -->
-  <div class="pages-wrapper">
+  <!-- ═ HOME PAGE ═ -->
+  <div id="pgHome" class="page active-page">
 
-    <!-- ════════ HOME PAGE ════════ -->
-    <div id="homePage" class="page page--active">
-
-      <!-- TODAY'S SUMMARY CARD -->
-      <div class="summary-card">
-        <div class="summary-left">
-          <p class="summary-label">TODAY'S EXPENSES</p>
-          <h2 class="summary-amount" id="todayTotal">₹ 0.00</h2>
-          <p class="summary-count">
-            <i class="fas fa-wallet"></i>
-            <span id="todayCount">0</span> Expenses Today
-          </p>
-        </div>
-        <div class="summary-right">
-          <i class="fas fa-calendar-alt summary-cal-icon"></i>
-          <p class="summary-date" id="summaryDate"></p>
-          <p class="summary-weekday" id="summaryWeekday"></p>
-        </div>
+    <!-- Summary card -->
+    <div class="summary-card">
+      <div>
+        <div class="sc-label">TODAY'S EXPENSES</div>
+        <div class="sc-amount" id="scAmount">₹ 0.00</div>
+        <div class="sc-count"><i class="fas fa-wallet"></i> <span id="scCount">0</span> Expenses Today</div>
       </div>
+      <div class="sc-right">
+        <i class="fas fa-calendar-alt sc-cal"></i>
+        <div class="sc-date" id="scDate"></div>
+        <div class="sc-day"  id="scDay"></div>
+      </div>
+    </div>
 
-      <!-- ADD NEW EXPENSE CARD -->
-      <div class="section-card">
-        <div class="section-card-header">
-          <i class="fas fa-pen-to-square header-icon"></i>
-          <span>ADD NEW EXPENSE</span>
-        </div>
-        <div class="add-expense-grid">
-          <div class="add-field">
-            <label class="add-label">Currency</label>
-            <div class="custom-select-wrap">
-              <select id="expCurrency" class="add-input add-select" onchange="updateCurrencyBadge()">
-                <option value="₹">₹ INR</option>
-                <option value="$">$ USD</option>
-                <option value="€">€ EUR</option>
-                <option value="£">£ GBP</option>
-                <option value="¥">¥ JPY</option>
-                <option value="₩">₩ KRW</option>
-                <option value="A$">A$ AUD</option>
-                <option value="C$">C$ CAD</option>
-                <option value="د.إ">د.إ AED</option>
-                <option value="₺">₺ TRY</option>
-                <option value="R$">R$ BRL</option>
-                <option value="SGD">SGD</option>
-              </select>
-              <i class="fas fa-chevron-down select-arrow"></i>
-            </div>
-          </div>
-          <div class="add-field add-field--grow">
-            <label class="add-label">Expense Name</label>
-            <input
-              type="text"
-              id="expName"
-              class="add-input"
-              placeholder="Enter expense name"
-              onkeydown="if(event.key==='Enter') handleAddExpense()"
-            />
-          </div>
-          <div class="add-field">
-            <label class="add-label">Amount</label>
-            <div class="amount-input-wrap">
-              <input
-                type="number"
-                id="expAmount"
-                class="add-input add-input--amount"
-                placeholder="Enter amount"
-                min="0"
-                step="0.01"
-                onkeydown="if(event.key==='Enter') handleAddExpense()"
-              />
-              <span id="currencyBadge" class="currency-badge">₹</span>
-            </div>
+    <!-- Add expense -->
+    <div class="card">
+      <div class="card-hdr"><i class="fas fa-pen"></i> ADD NEW EXPENSE</div>
+      <div class="add-row">
+        <div class="add-col">
+          <label>Currency</label>
+          <div class="sel-wrap">
+            <select id="addCur" onchange="syncBadge()">
+              <option value="₹">₹ INR</option>
+              <option value="$">$ USD</option>
+              <option value="€">€ EUR</option>
+              <option value="£">£ GBP</option>
+              <option value="¥">¥ JPY</option>
+              <option value="₩">₩ KRW</option>
+              <option value="A$">A$ AUD</option>
+              <option value="C$">C$ CAD</option>
+              <option value="د.إ">AED</option>
+              <option value="SGD">SGD</option>
+            </select>
+            <i class="fas fa-chevron-down sel-arrow"></i>
           </div>
         </div>
-        <div id="addExpenseError" class="form-error add-form-error"></div>
-        <button id="addExpenseBtn" class="btn-primary btn-full btn-add-expense" onclick="handleAddExpense()">
-          <span id="addBtnText"><i class="fas fa-plus"></i>&nbsp; Add Expense</span>
-          <span id="addBtnSpinner" class="btn-spinner d-none"></span>
-        </button>
-      </div>
-
-      <!-- EXPENSE HISTORY -->
-      <div class="history-header-row">
-        <div class="section-card-header">
-          <i class="fas fa-clock-rotate-left header-icon"></i>
-          <span>EXPENSE HISTORY</span>
+        <div class="add-col add-grow">
+          <label>Expense Name</label>
+          <input id="addName" type="text" placeholder="Enter expense name"/>
         </div>
-        <button class="clear-all-btn" onclick="handleClearAll()">
-          <i class="fas fa-trash-can"></i>
-          <span>Clear All</span>
-        </button>
-      </div>
-
-      <!-- Search -->
-      <div class="search-wrap">
-        <i class="fas fa-magnifying-glass search-icon"></i>
-        <input
-          type="text"
-          id="searchInput"
-          class="search-input"
-          placeholder="Search expenses..."
-          oninput="renderHistory()"
-        />
-      </div>
-
-      <!-- History List -->
-      <div id="historyContainer" class="history-container">
-        <!-- Rendered by JS -->
-      </div>
-
-    </div><!-- /homePage -->
-
-    <!-- ════════ STATS PAGE ════════ -->
-    <div id="statsPage" class="page">
-      <h2 class="page-title">Statistics</h2>
-
-      <div class="stats-cards-grid" id="statsCardsGrid">
-        <!-- Rendered by JS -->
-      </div>
-
-      <div class="section-card mt-16">
-        <div class="section-card-header">
-          <i class="fas fa-chart-column header-icon"></i>
-          <span>LAST 7 DAYS</span>
-        </div>
-        <div id="barChart" class="bar-chart-wrap">
-          <!-- Rendered by JS -->
-        </div>
-      </div>
-
-      <div class="section-card mt-16">
-        <div class="section-card-header">
-          <i class="fas fa-trophy header-icon"></i>
-          <span>TOP EXPENSES</span>
-        </div>
-        <div id="topExpenses">
-          <!-- Rendered by JS -->
-        </div>
-      </div>
-    </div><!-- /statsPage -->
-
-    <!-- ════════ CALENDAR PAGE ════════ -->
-    <div id="calendarPage" class="page">
-      <h2 class="page-title">Calendar</h2>
-
-      <div class="cal-nav-row">
-        <button class="cal-nav-btn" onclick="calendarChangeMonth(-1)">
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span id="calMonthLabel" class="cal-month-label"></span>
-        <button class="cal-nav-btn" onclick="calendarChangeMonth(1)">
-          <i class="fas fa-chevron-right"></i>
-        </button>
-      </div>
-
-      <div class="section-card">
-        <div id="calendarGrid" class="calendar-grid">
-          <!-- Rendered by JS -->
-        </div>
-      </div>
-
-      <div id="calDayDetail" class="section-card mt-12 d-none">
-        <!-- Rendered by JS -->
-      </div>
-    </div><!-- /calendarPage -->
-
-    <!-- ════════ SETTINGS PAGE ════════ -->
-    <div id="settingsPage" class="page">
-      <h2 class="page-title">Settings</h2>
-
-      <div class="section-card settings-card">
-        <!-- User Info -->
-        <div class="settings-user-row">
-          <div class="settings-avatar">
-            <i class="fas fa-user-circle"></i>
-          </div>
-          <div class="settings-user-info">
-            <p id="settingsUserName" class="settings-name"></p>
-            <p id="settingsUserEmail" class="settings-email"></p>
+        <div class="add-col">
+          <label>Amount</label>
+          <div class="amt-wrap">
+            <input id="addAmt" type="number" placeholder="0.00" min="0" step="0.01"/>
+            <span id="curBadge" class="cur-badge">₹</span>
           </div>
         </div>
+      </div>
+      <div id="addErr" class="err-msg mt8"></div>
+      <button class="btn-gold w100 mt12" id="addBtn" onclick="doAdd()">
+        <span id="addTxt"><i class="fas fa-plus"></i> Add Expense</span>
+        <span id="addSpin" class="spin hidden"></span>
+      </button>
+    </div>
 
-        <!-- Dark Mode -->
-        <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="fas fa-moon settings-row-icon"></i>
-            <span>Dark Mode</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="darkModeToggle" onchange="handleDarkToggle()" />
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
+    <!-- History header -->
+    <div class="hist-hdr">
+      <div class="card-hdr"><i class="fas fa-history"></i> EXPENSE HISTORY</div>
+      <button class="clear-btn" onclick="doClearAll()"><i class="fas fa-trash-alt"></i> Clear All</button>
+    </div>
 
-        <!-- Default Currency -->
-        <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="fas fa-coins settings-row-icon"></i>
-            <span>Default Currency</span>
-          </div>
-          <select id="defaultCurrencySelect" class="settings-select" onchange="saveDefaultCurrency()">
-            <option value="₹">₹ INR</option>
-            <option value="$">$ USD</option>
-            <option value="€">€ EUR</option>
-            <option value="£">£ GBP</option>
-            <option value="¥">¥ JPY</option>
-            <option value="₩">₩ KRW</option>
-            <option value="A$">A$ AUD</option>
-            <option value="C$">C$ CAD</option>
-          </select>
-        </div>
+    <!-- Search -->
+    <div class="search-wrap">
+      <i class="fas fa-search"></i>
+      <input id="searchInp" type="text" placeholder="Search expenses..." oninput="renderHistory()"/>
+    </div>
 
-        <!-- Notifications -->
-        <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="fas fa-bell settings-row-icon"></i>
-            <span>App Version</span>
-          </div>
-          <span class="settings-row-value">v2.0.0</span>
-        </div>
+    <!-- History list -->
+    <div id="histList"></div>
 
-        <!-- Logout -->
-        <div class="settings-logout-wrap">
-          <button class="btn-logout-full" onclick="handleLogout()">
-            <i class="fas fa-sign-out-alt"></i>
-            &nbsp;Logout
-          </button>
+  </div><!-- /pgHome -->
+
+  <!-- ═ STATS PAGE ═ -->
+  <div id="pgStats" class="page">
+    <h2 class="pg-title">Statistics</h2>
+    <div id="statsGrid" class="stats-grid"></div>
+    <div class="card mt16">
+      <div class="card-hdr"><i class="fas fa-chart-column"></i> LAST 7 DAYS</div>
+      <div id="barChart" class="bar-chart"></div>
+    </div>
+    <div class="card mt16">
+      <div class="card-hdr"><i class="fas fa-trophy"></i> TOP EXPENSES</div>
+      <div id="topList"></div>
+    </div>
+  </div>
+
+  <!-- ═ CALENDAR PAGE ═ -->
+  <div id="pgCalendar" class="page">
+    <h2 class="pg-title">Calendar</h2>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calMove(-1)"><i class="fas fa-chevron-left"></i></button>
+      <span id="calLabel" class="cal-label"></span>
+      <button class="cal-nav-btn" onclick="calMove(1)"><i class="fas fa-chevron-right"></i></button>
+    </div>
+    <div class="card">
+      <div id="calGrid"></div>
+    </div>
+    <div id="calDetail" class="card mt12 hidden"></div>
+  </div>
+
+  <!-- ═ SETTINGS PAGE ═ -->
+  <div id="pgSettings" class="page">
+    <h2 class="pg-title">Settings</h2>
+    <div class="card settings-card">
+      <div class="set-user">
+        <i class="fas fa-user-circle set-av"></i>
+        <div>
+          <div id="setName"  class="set-uname"></div>
+          <div id="setEmail" class="set-uemail"></div>
         </div>
       </div>
-    </div><!-- /settingsPage -->
+      <div class="set-row">
+        <div class="set-lbl"><i class="fas fa-moon"></i> Dark Mode</div>
+        <label class="toggle"><input type="checkbox" id="darkChk" onchange="handleDarkChk()"/><span class="track"></span></label>
+      </div>
+      <div class="set-row">
+        <div class="set-lbl"><i class="fas fa-coins"></i> Default Currency</div>
+        <select id="setCur" class="set-sel" onchange="saveCur()">
+          <option value="₹">₹ INR</option>
+          <option value="$">$ USD</option>
+          <option value="€">€ EUR</option>
+          <option value="£">£ GBP</option>
+          <option value="¥">¥ JPY</option>
+        </select>
+      </div>
+      <div class="set-row">
+        <div class="set-lbl"><i class="fas fa-info-circle"></i> Version</div>
+        <span class="set-val">v2.0.0</span>
+      </div>
+      <div style="padding:16px 18px;border-top:1px solid var(--border);">
+        <button class="btn-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </div>
+  </div>
 
-  </div><!-- /pages-wrapper -->
-
-  <!-- ── BOTTOM NAVIGATION ── -->
+  <!-- Bottom nav -->
   <nav class="bottom-nav">
-    <button id="navHome" class="nav-btn nav-btn--active" onclick="navigateTo('home')">
-      <i class="fas fa-house"></i>
-      <span>Home</span>
-    </button>
-    <button id="navStats" class="nav-btn" onclick="navigateTo('stats')">
-      <i class="fas fa-chart-bar"></i>
-      <span>Stats</span>
-    </button>
-    <button class="nav-fab" onclick="scrollToAddExpense()" aria-label="Add Expense">
-      <i class="fas fa-plus"></i>
-    </button>
-    <button id="navCalendar" class="nav-btn" onclick="navigateTo('calendar')">
-      <i class="fas fa-calendar-alt"></i>
-      <span>Calendar</span>
-    </button>
-    <button id="navSettings" class="nav-btn" onclick="navigateTo('settings')">
-      <i class="fas fa-gear"></i>
-      <span>Settings</span>
-    </button>
+    <button id="navHome"     class="nav-item active" onclick="goPage('home')"><i class="fas fa-house"></i><span>Home</span></button>
+    <button id="navStats"    class="nav-item"        onclick="goPage('stats')"><i class="fas fa-chart-bar"></i><span>Stats</span></button>
+    <button class="nav-fab"  onclick="fabAction()"><i class="fas fa-plus"></i></button>
+    <button id="navCalendar" class="nav-item"        onclick="goPage('calendar')"><i class="fas fa-calendar-alt"></i><span>Calendar</span></button>
+    <button id="navSettings" class="nav-item"        onclick="goPage('settings')"><i class="fas fa-cog"></i><span>Settings</span></button>
   </nav>
 
 </div><!-- /appScreen -->
 
-<!-- ══════════════════════════════════════════════
-     TOAST NOTIFICATION
-══════════════════════════════════════════════ -->
-<div id="toast" class="toast d-none"></div>
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
 
-<!-- ══════════════════════════════════════════════
-     CONFIRMATION MODAL
-══════════════════════════════════════════════ -->
-<div id="confirmModal" class="modal-overlay d-none">
+<!-- Confirm modal -->
+<div id="modal" class="modal-overlay hidden">
   <div class="modal-box">
-    <div class="modal-icon">
-      <i class="fas fa-triangle-exclamation"></i>
-    </div>
-    <h3 id="modalTitle" class="modal-title">Are you sure?</h3>
-    <p id="modalMessage" class="modal-message">This action cannot be undone.</p>
-    <div class="modal-actions">
-      <button class="modal-btn modal-btn--cancel" onclick="closeConfirmModal()">Cancel</button>
-      <button class="modal-btn modal-btn--confirm" id="modalConfirmBtn">Delete</button>
+    <div class="modal-ico"><i class="fas fa-triangle-exclamation"></i></div>
+    <div id="modalTitle"   class="modal-title"></div>
+    <div id="modalMsg"     class="modal-msg"></div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="mbtn mbtn-delete" id="modalOk">Delete</button>
     </div>
   </div>
 </div>
