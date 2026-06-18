@@ -8,14 +8,64 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
+  :root {
+    --bg: #f4f5f9;
+    --text: #14213D;
+    --muted: #8A8FA3;
+    --card-bg: #fff;
+    --input-bg: #FAFAFC;
+    --input-border: #E8E9F0;
+    --tab-bg: #F0F1F6;
+    --tab-text: #6B7280;
+    --border: #F0F1F6;
+    --danger-bg: #FCEAEA;
+    --danger-text: #C0392B;
+    --amount-color: #B9842A;
+    --shadow: rgba(20,33,61,0.07);
+  }
+  [data-theme="dark"] {
+    --bg: #0B1422;
+    --text: #F3F4F8;
+    --muted: #9AA5B8;
+    --card-bg: #131F33;
+    --input-bg: #1B2740;
+    --input-border: #2A3854;
+    --tab-bg: #1B2740;
+    --tab-text: #9AA5B8;
+    --border: #223352;
+    --danger-bg: #3A1C1F;
+    --danger-text: #FF6B6B;
+    --amount-color: #E3B564;
+    --shadow: rgba(0,0,0,0.4);
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Poppins', Arial, sans-serif;
-    background: #f4f5f9;
-    color: #14213D;
+    background: var(--bg);
+    color: var(--text);
     padding: 20px 16px 50px;
+    transition: background 0.2s ease, color 0.2s ease;
   }
   .wrap { max-width: 440px; margin: 0 auto; }
+
+  .theme-toggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1.5px solid var(--input-border);
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px var(--shadow);
+    z-index: 50;
+  }
 
   .logo-wrap { text-align: center; margin-bottom: 6px; }
   .logo-wrap img {
@@ -28,22 +78,22 @@
   }
 
   .card {
-    background: #fff;
+    background: var(--card-bg);
     border-radius: 18px;
     padding: 22px;
     margin-top: 16px;
-    box-shadow: 0 6px 20px rgba(20,33,61,0.07);
+    box-shadow: 0 6px 20px var(--shadow);
   }
 
-  label { display: block; font-size: 12px; font-weight: 600; color: #8A8FA3; margin: 14px 0 6px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 14px 0 6px; }
   input, select {
     width: 100%;
     padding: 12px 14px;
-    border: 1.5px solid #E8E9F0;
+    border: 1.5px solid var(--input-border);
     border-radius: 10px;
     font-size: 14px;
-    background: #FAFAFC;
-    color: #14213D;
+    background: var(--input-bg);
+    color: var(--text);
     font-family: inherit;
   }
   input:focus, select:focus { outline: none; border-color: #C9972C; }
@@ -61,14 +111,14 @@
   }
   .btn-main:disabled { opacity: 0.65; cursor: not-allowed; }
 
-  .tabs { display: flex; gap: 6px; background: #F0F1F6; padding: 4px; border-radius: 999px; }
+  .tabs { display: flex; gap: 6px; background: var(--tab-bg); padding: 4px; border-radius: 999px; }
   .tabs button {
-    flex: 1; padding: 10px; background: transparent; color: #6B7280;
+    flex: 1; padding: 10px; background: transparent; color: var(--tab-text);
     border-radius: 999px; font-size: 13.5px;
   }
   .tabs button.active { background: linear-gradient(135deg, #E0B65A, #C9972C); color: #fff; }
 
-  .msg-error { color: #C0392B; font-size: 13px; margin-top: 10px; line-height: 1.4; }
+  .msg-error { color: var(--danger-text); font-size: 13px; margin-top: 10px; line-height: 1.4; }
   .hidden { display: none !important; }
 
   .today-box {
@@ -99,26 +149,44 @@
   .today-date .day-line { font-size: 11px; opacity: 0.9; margin-top: 1px; }
 
   .top-row { display: flex; justify-content: space-between; align-items: center; }
-  .logout-btn { background: #F0F1F6; color: #14213D; padding: 9px 16px; font-size: 12.5px; border-radius: 999px; }
+  .logout-btn { background: var(--tab-bg); color: var(--text); padding: 9px 16px; font-size: 12.5px; border-radius: 999px; }
 
-  .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F0F1F6; gap: 10px; }
+  .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 10px; }
   .expense-item:last-child { border-bottom: none; }
   .expense-item .name { font-weight: 600; font-size: 14px; display: block; }
-  .expense-item .time { font-size: 11.5px; color: #8A8FA3; display: block; margin-top: 2px; }
+  .expense-item .time { font-size: 11.5px; color: var(--muted); display: block; margin-top: 2px; }
   .expense-item .right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .expense-item .amount { color: #B9842A; font-weight: 700; white-space: nowrap; font-size: 14px; }
-  .del-btn { background: #FCEAEA; color: #C0392B; padding: 7px 12px; font-size: 12px; border-radius: 8px; }
+  .expense-item .amount { color: var(--amount-color); font-weight: 700; white-space: nowrap; font-size: 14px; }
+  .del-btn { background: var(--danger-bg); color: var(--danger-text); padding: 7px 12px; font-size: 12px; border-radius: 8px; }
 
-  .day-title { font-size: 12px; font-weight: 700; color: #8A8FA3; letter-spacing: 0.3px; margin: 16px 0 8px; }
+  .day-title { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.3px; margin: 16px 0 8px; }
   .day-title:first-child { margin-top: 0; }
 
-  .clear-btn { background: #FCEAEA; color: #C0392B; padding: 8px 14px; font-size: 12px; border-radius: 999px; }
+  .clear-btn { background: var(--danger-bg); color: var(--danger-text); padding: 8px 14px; font-size: 12px; border-radius: 999px; }
   .row { display: flex; justify-content: space-between; align-items: center; }
-  .empty-msg { color: #8A8FA3; font-size: 13.5px; margin-top: 12px; text-align: center; padding: 10px 0; }
-  #loadingMsg { text-align: center; color: #8A8FA3; font-size: 13.5px; margin-top: 18px; }
+  .empty-msg { color: var(--muted); font-size: 13.5px; margin-top: 12px; text-align: center; padding: 10px 0; }
+  #loadingMsg { text-align: center; color: var(--muted); font-size: 13.5px; margin-top: 18px; }
+
+  /* ---------- SIMPLE CALCULATOR ---------- */
+  .calc-toggle-btn { background: var(--tab-bg); color: var(--text); padding: 8px 14px; font-size: 12.5px; border-radius: 999px; margin-top: 10px; }
+  .calc-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .calc-display {
+    width: 100%; padding: 14px; font-size: 20px; text-align: right;
+    border-radius: 10px; border: 1.5px solid var(--input-border);
+    background: var(--input-bg); color: var(--text); margin-bottom: 10px;
+  }
+  .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .calc-btn {
+    padding: 14px 0; border-radius: 10px; background: var(--input-bg);
+    color: var(--text); font-size: 16px; font-weight: 600; border: 1px solid var(--input-border);
+  }
+  .calc-op { background: var(--tab-bg); }
+  .calc-equals { grid-column: 1 / -1; margin-top: 8px; background: linear-gradient(135deg, #E0B65A, #C9972C); color: #fff; padding: 14px 0; font-size: 16px; }
+  .calc-use-btn { margin-top: 10px; }
 </style>
 </head>
 <body>
+<button type="button" id="themeToggle" class="theme-toggle">🌙</button>
 <div class="wrap">
 
   <div class="logo-wrap"><img src="logo.png" alt="Expence Tracker" /></div>
@@ -188,6 +256,36 @@
       <input type="text" id="expenseName" placeholder="e.g. Lunch" />
       <label for="expenseAmount">Amount</label>
       <input type="number" id="expenseAmount" placeholder="e.g. 150" min="0.01" step="0.01" />
+      <button type="button" id="calcToggleBtn" class="calc-toggle-btn">🧮 Calculator</button>
+
+      <div id="calcPanel" class="calc-panel hidden">
+        <input type="text" id="calcDisplay" class="calc-display" readonly value="0" />
+        <div class="calc-grid">
+          <button type="button" class="calc-btn" data-digit="7">7</button>
+          <button type="button" class="calc-btn" data-digit="8">8</button>
+          <button type="button" class="calc-btn" data-digit="9">9</button>
+          <button type="button" class="calc-btn calc-op" data-action="divide">÷</button>
+
+          <button type="button" class="calc-btn" data-digit="4">4</button>
+          <button type="button" class="calc-btn" data-digit="5">5</button>
+          <button type="button" class="calc-btn" data-digit="6">6</button>
+          <button type="button" class="calc-btn calc-op" data-action="multiply">×</button>
+
+          <button type="button" class="calc-btn" data-digit="1">1</button>
+          <button type="button" class="calc-btn" data-digit="2">2</button>
+          <button type="button" class="calc-btn" data-digit="3">3</button>
+          <button type="button" class="calc-btn calc-op" data-action="subtract">−</button>
+
+          <button type="button" class="calc-btn" data-action="clear">C</button>
+          <button type="button" class="calc-btn" data-digit="0">0</button>
+          <button type="button" class="calc-btn" data-digit=".">.</button>
+          <button type="button" class="calc-btn calc-op" data-action="add">+</button>
+
+          <button type="button" class="calc-btn calc-equals" data-action="equals">=</button>
+        </div>
+        <button type="button" class="btn-main calc-use-btn" id="calcUseBtn">Use This Amount</button>
+      </div>
+
       <p id="expenseMsg" class="msg-error hidden"></p>
       <button type="button" class="btn-main" id="addBtn">+ Add Expense</button>
     </div>
@@ -213,6 +311,23 @@
 <script>
 (function () {
   "use strict";
+
+  // ---------- DARK / LIGHT MODE (works even if Firebase fails to load) ----------
+  var themeToggle = document.getElementById("themeToggle");
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    themeToggle.textContent = theme === "dark" ? "☀️" : "🌙";
+    try { localStorage.setItem("expenceTrackerTheme", theme); } catch (e) {}
+  }
+  (function initTheme() {
+    var saved = null;
+    try { saved = localStorage.getItem("expenceTrackerTheme"); } catch (e) {}
+    applyTheme(saved === "dark" ? "dark" : "light");
+  })();
+  themeToggle.addEventListener("click", function () {
+    var current = document.documentElement.getAttribute("data-theme") || "light";
+    applyTheme(current === "light" ? "dark" : "light");
+  });
 
   // ---------- FIREBASE INIT ----------
   var firebaseConfig = {
@@ -272,6 +387,11 @@
   var expenseAmountInput = $("expenseAmount");
   var expenseMsg = $("expenseMsg");
   var addBtn = $("addBtn");
+
+  var calcToggleBtn = $("calcToggleBtn");
+  var calcPanel = $("calcPanel");
+  var calcDisplay = $("calcDisplay");
+  var calcUseBtn = $("calcUseBtn");
 
   var historyDiv = $("historyDiv");
   var clearAllBtn = $("clearAllBtn");
@@ -513,6 +633,110 @@
       e.preventDefault();
       addBtn.click();
     }
+  });
+
+  // ---------- SIMPLE CALCULATOR (add, subtract, multiply, divide) ----------
+  var calcState = { display: "0", firstOperand: null, operator: null, waitingForSecond: false };
+
+  function calcUpdateDisplay() { calcDisplay.value = calcState.display; }
+
+  function calcRoundClean(n) {
+    if (isNaN(n)) { return 0; }
+    return Math.round(n * 100) / 100;
+  }
+
+  function calcInputDigit(d) {
+    if (calcState.waitingForSecond) {
+      calcState.display = d;
+      calcState.waitingForSecond = false;
+    } else {
+      calcState.display = (calcState.display === "0") ? d : calcState.display + d;
+    }
+    calcUpdateDisplay();
+  }
+
+  function calcInputDecimal() {
+    if (calcState.waitingForSecond) {
+      calcState.display = "0.";
+      calcState.waitingForSecond = false;
+      calcUpdateDisplay();
+      return;
+    }
+    if (calcState.display.indexOf(".") === -1) {
+      calcState.display = calcState.display + ".";
+      calcUpdateDisplay();
+    }
+  }
+
+  function calcCompute(a, b, op) {
+    if (op === "add") { return a + b; }
+    if (op === "subtract") { return a - b; }
+    if (op === "multiply") { return a * b; }
+    if (op === "divide") { return b === 0 ? NaN : a / b; }
+    return b;
+  }
+
+  function calcHandleOperator(nextOperator) {
+    var inputValue = parseFloat(calcState.display);
+    if (calcState.operator && calcState.waitingForSecond) {
+      calcState.operator = nextOperator;
+      return;
+    }
+    if (calcState.firstOperand === null) {
+      calcState.firstOperand = inputValue;
+    } else if (calcState.operator) {
+      var result = calcRoundClean(calcCompute(calcState.firstOperand, inputValue, calcState.operator));
+      calcState.display = String(result);
+      calcState.firstOperand = result;
+    }
+    calcState.waitingForSecond = true;
+    calcState.operator = nextOperator;
+    calcUpdateDisplay();
+  }
+
+  function calcHandleEquals() {
+    if (calcState.operator === null) { return; }
+    var inputValue = parseFloat(calcState.display);
+    var result = calcRoundClean(calcCompute(calcState.firstOperand, inputValue, calcState.operator));
+    calcState.display = String(result);
+    calcState.firstOperand = null;
+    calcState.operator = null;
+    calcState.waitingForSecond = false;
+    calcUpdateDisplay();
+  }
+
+  function calcClear() {
+    calcState = { display: "0", firstOperand: null, operator: null, waitingForSecond: false };
+    calcUpdateDisplay();
+  }
+
+  calcToggleBtn.addEventListener("click", function () {
+    calcPanel.classList.toggle("hidden");
+  });
+
+  var calcButtons = document.querySelectorAll(".calc-btn");
+  for (var ci = 0; ci < calcButtons.length; ci++) {
+    calcButtons[ci].addEventListener("click", function (e) {
+      var btn = e.currentTarget;
+      var digit = btn.getAttribute("data-digit");
+      var action = btn.getAttribute("data-action");
+      if (digit === ".") { calcInputDecimal(); return; }
+      if (digit !== null) { calcInputDigit(digit); return; }
+      if (action === "clear") { calcClear(); return; }
+      if (action === "equals") { calcHandleEquals(); return; }
+      if (action) { calcHandleOperator(action); return; }
+    });
+  }
+
+  calcUseBtn.addEventListener("click", function () {
+    var val = parseFloat(calcDisplay.value);
+    if (!isNaN(val) && val > 0) {
+      expenseAmountInput.value = val;
+      hideMsg(expenseMsg);
+    }
+    calcPanel.classList.add("hidden");
+    calcClear();
+    expenseAmountInput.focus();
   });
 
   // ---------- REAL-TIME LISTENER ----------
