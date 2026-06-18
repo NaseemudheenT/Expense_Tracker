@@ -1,230 +1,578 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Expence Tracker — Smart Daily Expense Manager</title>
-  <meta name="description" content="A premium, secure expense tracker. Log daily spending, view history and stay on top of your money." />
-  <link rel="icon" type="image/png" href="logo.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Expence Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #f5f6fa; color: #10213A; padding: 16px; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  h1 { text-align: center; font-size: 22px; letter-spacing: 2px; margin-bottom: 4px; }
+  h1 span { display: block; font-size: 12px; color: #C9972C; letter-spacing: 3px; margin-top: 2px; }
+  .card { background: #fff; border-radius: 14px; padding: 18px; margin-top: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+  label { display: block; font-size: 12px; font-weight: bold; color: #6B7280; margin: 10px 0 4px; }
+  input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fff; color: #10213A; }
+  button { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; font-family: inherit; }
+  .btn-main { width: 100%; background: #C9972C; color: #fff; padding: 12px; font-size: 14px; margin-top: 14px; }
+  .btn-main:disabled { opacity: 0.6; cursor: not-allowed; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 6px; }
+  .tabs button { flex: 1; padding: 10px; background: #eee; color: #10213A; }
+  .tabs button.active { background: #C9972C; color: #fff; }
+  .msg-error { color: #c0392b; font-size: 13px; margin-top: 8px; }
+  .hidden { display: none !important; }
+  .today-box { background: #C9972C; color: #fff; border-radius: 14px; padding: 18px; margin-top: 14px; }
+  .today-box .amount { font-size: 28px; font-weight: bold; margin: 4px 0; }
+  .top-row { display: flex; justify-content: space-between; align-items: center; }
+  .logout-btn { background: #eee; color: #10213A; padding: 8px 14px; font-size: 12px; }
+  .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; gap: 10px; }
+  .expense-item:last-child { border-bottom: none; }
+  .expense-item .name { font-weight: bold; font-size: 14px; display: block; }
+  .expense-item .time { font-size: 11px; color: #6B7280; display: block; }
+  .expense-item .right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .expense-item .amount { color: #C9972C; font-weight: bold; white-space: nowrap; }
+  .del-btn { background: #fde2e2; color: #c0392b; padding: 6px 10px; font-size: 12px; }
+  .day-title { font-size: 12px; font-weight: bold; color: #6B7280; margin: 14px 0 6px; }
+  .clear-btn { background: #fde2e2; color: #c0392b; padding: 8px 12px; font-size: 12px; }
+  .row { display: flex; justify-content: space-between; align-items: center; }
+  .empty-msg { color: #6B7280; font-size: 13px; margin-top: 10px; }
+  #loadingMsg { text-align: center; color: #6B7280; font-size: 13px; margin-top: 14px; }
+</style>
 </head>
 <body>
+<div class="wrap">
 
-  <!-- ================= TOAST CONTAINER ================= -->
-  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+  <h1>EXPENCE <span>TRACKER</span></h1>
 
-  <!-- ================= AUTH SCREEN ================= -->
-  <div id="authScreen" class="auth-screen">
-    <div class="auth-card">
-      <div class="brand">
-        <img src="logo.png" alt="Expence Tracker logo" class="brand-logo" />
-        <h1 class="brand-title">EXPENCE <span>TRACKER</span></h1>
-      </div>
+  <p id="loadingMsg">Loading...</p>
 
-      <div class="auth-tabs">
-        <button type="button" class="auth-tab active" id="tabLogin">Log In</button>
-        <button type="button" class="auth-tab" id="tabSignup">Sign Up</button>
-      </div>
-
-      <p id="authError" class="auth-error hidden"></p>
-
-      <!-- LOGIN FORM -->
-      <form id="loginForm" class="auth-form" novalidate>
-        <label class="field-label" for="loginEmail">Email</label>
-        <input type="email" id="loginEmail" class="field-input" placeholder="you@example.com" autocomplete="email" required />
-
-        <label class="field-label" for="loginPassword">Password</label>
-        <input type="password" id="loginPassword" class="field-input" placeholder="Enter your password" autocomplete="current-password" required />
-
-        <button type="submit" class="btn-gold" id="loginBtn">
-          <span class="btn-label">Log In</span>
-          <span class="btn-spinner hidden"></span>
-        </button>
-
-        <p class="auth-switch">Don't have an account? <a href="#" id="goToSignup">Sign up</a></p>
-      </form>
-
-      <!-- SIGNUP FORM -->
-      <form id="signupForm" class="auth-form hidden" novalidate>
-        <label class="field-label" for="signupName">Full Name</label>
-        <input type="text" id="signupName" class="field-input" placeholder="Your full name" autocomplete="name" required />
-
-        <label class="field-label" for="signupEmail">Email</label>
-        <input type="email" id="signupEmail" class="field-input" placeholder="you@example.com" autocomplete="email" required />
-
-        <label class="field-label" for="signupPassword">Password</label>
-        <input type="password" id="signupPassword" class="field-input" placeholder="At least 6 characters" autocomplete="new-password" required />
-
-        <label class="field-label" for="signupConfirm">Confirm Password</label>
-        <input type="password" id="signupConfirm" class="field-input" placeholder="Re-enter password" autocomplete="new-password" required />
-
-        <button type="submit" class="btn-gold" id="signupBtn">
-          <span class="btn-label">Create Account</span>
-          <span class="btn-spinner hidden"></span>
-        </button>
-
-        <p class="auth-switch">Already have an account? <a href="#" id="goToLogin">Log in</a></p>
-      </form>
+  <!-- LOGIN / SIGNUP -->
+  <div id="authCard" class="card hidden">
+    <div class="tabs">
+      <button type="button" id="tabLogin" class="active">Log In</button>
+      <button type="button" id="tabSignup">Sign Up</button>
     </div>
+
+    <form id="loginForm">
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" required />
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" required />
+      <button type="submit" class="btn-main" id="loginBtn">Log In</button>
+    </form>
+
+    <form id="signupForm" class="hidden">
+      <label for="signupName">Full Name</label>
+      <input type="text" id="signupName" required />
+      <label for="signupEmail">Email</label>
+      <input type="email" id="signupEmail" required />
+      <label for="signupPassword">Password</label>
+      <input type="password" id="signupPassword" required />
+      <label for="signupConfirm">Confirm Password</label>
+      <input type="password" id="signupConfirm" required />
+      <button type="submit" class="btn-main" id="signupBtn">Sign Up</button>
+    </form>
+
+    <p id="authMsg" class="msg-error hidden"></p>
   </div>
 
-  <!-- ================= APP SCREEN ================= -->
-  <div id="appScreen" class="app-screen hidden">
+  <!-- MAIN APP -->
+  <div id="appCard" class="hidden">
 
-    <!-- TOP BAR -->
-    <header class="topbar">
-      <button class="icon-btn" id="menuBtn" aria-label="Open menu">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
-      <div class="topbar-brand">
-        <img src="logo.png" alt="Expence Tracker logo" class="topbar-logo" />
-        <div class="topbar-titles">
-          <span class="topbar-title">EXPENCE</span>
-          <span class="topbar-subtitle">— TRACKER —</span>
-        </div>
+    <div class="card top-row">
+      <span id="userName" style="font-weight:bold;"></span>
+      <button type="button" class="logout-btn" id="logoutBtn">Log Out</button>
+    </div>
+
+    <div class="today-box">
+      <div>TODAY'S EXPENSES</div>
+      <div class="amount" id="todayAmount">0.00</div>
+      <div id="todayCount">0 Expenses Today</div>
+    </div>
+
+    <div class="card">
+      <label for="currency">Currency</label>
+      <select id="currency">
+        <option value="INR" selected>INR (Rs.)</option>
+        <option value="USD">USD ($)</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+      </select>
+      <label for="expenseName">Expense Name</label>
+      <input type="text" id="expenseName" placeholder="e.g. Lunch" />
+      <label for="expenseAmount">Amount</label>
+      <input type="number" id="expenseAmount" placeholder="e.g. 150" min="0.01" step="0.01" />
+      <p id="expenseMsg" class="msg-error hidden"></p>
+      <button type="button" class="btn-main" id="addBtn">+ Add Expense</button>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <strong style="font-size:13px;">EXPENSE HISTORY</strong>
+        <button type="button" class="clear-btn" id="clearAllBtn">Clear All</button>
       </div>
-      <button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode">
-        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-      </button>
-    </header>
-
-    <!-- SIDEBAR -->
-    <div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-avatar" id="sidebarAvatar">U</div>
-        <div>
-          <p class="sidebar-name" id="sidebarName">User</p>
-          <p class="sidebar-email" id="sidebarEmail">user@example.com</p>
-        </div>
-      </div>
-      <button class="sidebar-link" id="sidebarTheme">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-        Toggle Dark Mode
-      </button>
-      <button class="sidebar-link" id="sidebarExport">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Backup / Export Data
-      </button>
-      <button class="sidebar-link danger" id="logoutBtn">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14 4-4-4-4m4 4H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Log Out
-      </button>
-      <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">&times;</button>
-    </aside>
-
-    <main class="container">
-
-      <!-- TODAY'S EXPENSES CARD -->
-      <section class="today-card">
-        <div class="today-info">
-          <p class="today-label">TODAY'S EXPENSES</p>
-          <p class="today-amount" id="todayAmount">₹ 0.00</p>
-          <p class="today-count" id="todayCount">
-            <svg viewBox="0 0 24 24" fill="none" class="bag-icon"><path d="M6 7h12l1 13H5L6 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 7a3 3 0 1 1 6 0" stroke="currentColor" stroke-width="1.6"/></svg>
-            <span id="todayCountText">0 Expenses Today</span>
-          </p>
-        </div>
-        <div class="today-date">
-          <svg viewBox="0 0 24 24" fill="none" class="cal-icon"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          <span id="todayDateLine1">—</span>
-          <span id="todayDateLine2" class="today-weekday">—</span>
-        </div>
-      </section>
-
-      <!-- ADD EXPENSE CARD -->
-      <section class="card add-card">
-        <h2 class="card-heading">
-          <svg viewBox="0 0 24 24" fill="none" class="heading-icon"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-          ADD NEW EXPENSE
-        </h2>
-        <form id="addExpenseForm" class="add-form" novalidate>
-          <div class="form-row">
-            <div class="form-group small">
-              <label class="field-label" for="expenseCurrency">Currency</label>
-              <select id="expenseCurrency" class="field-input">
-                <option value="INR" selected>₹ INR</option>
-                <option value="USD">$ USD</option>
-                <option value="EUR">€ EUR</option>
-                <option value="GBP">£ GBP</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="field-label" for="expenseName">Expense Name</label>
-              <input type="text" id="expenseName" class="field-input" placeholder="Enter expense name" maxlength="60" />
-            </div>
-            <div class="form-group">
-              <label class="field-label" for="expenseAmount">Amount</label>
-              <input type="number" id="expenseAmount" class="field-input" placeholder="Enter amount" min="0.01" step="0.01" inputmode="decimal" />
-            </div>
-          </div>
-          <p id="expenseError" class="form-error hidden"></p>
-          <button type="submit" class="btn-gold full" id="addExpenseBtn">
-            <span class="btn-label">+ Add Expense</span>
-            <span class="btn-spinner hidden"></span>
-          </button>
-        </form>
-      </section>
-
-      <!-- EXPENSE HISTORY -->
-      <section class="card history-card">
-        <div class="history-head">
-          <h2 class="card-heading">
-            <svg viewBox="0 0 24 24" fill="none" class="heading-icon"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            EXPENSE HISTORY
-          </h2>
-          <button class="clear-all-btn" id="clearAllBtn">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Clear All
-          </button>
-        </div>
-        <div id="historyList" class="history-list">
-          <p class="empty-state" id="emptyState">No expenses yet. Add your first one above.</p>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- BOTTOM NAV -->
-    <nav class="bottom-nav">
-      <button class="nav-item active" id="navHome">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5M6 10v9a1 1 0 0 0 1 1h3v-5h4v5h3a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Home</span>
-      </button>
-      <button class="nav-item" id="navStats">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M5 21V10M12 21V4M19 21v-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <span>Stats</span>
-      </button>
-      <button class="nav-fab" id="navAdd" aria-label="Add expense">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
-      </button>
-      <button class="nav-item" id="navCalendar">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <span>Calendar</span>
-      </button>
-      <button class="nav-item" id="navSettings">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" stroke="currentColor" stroke-width="1.3"/></svg>
-        <span>Settings</span>
-      </button>
-    </nav>
-  </div>
-
-  <!-- ================= CONFIRM MODAL ================= -->
-  <div id="confirmModal" class="modal-overlay hidden">
-    <div class="modal-box">
-      <h3 class="modal-title" id="confirmTitle">Are you sure?</h3>
-      <p class="modal-text" id="confirmText">This action cannot be undone.</p>
-      <div class="modal-actions">
-        <button class="btn-outline" id="confirmCancel">Cancel</button>
-        <button class="btn-danger" id="confirmOk">Delete</button>
+      <div id="historyDiv">
+        <p class="empty-msg" id="emptyMsg">No expenses yet.</p>
       </div>
     </div>
-  </div>
 
-  <script type="module" src="firebase.js"></script>
-  <script type="module" src="script.js"></script>
+  </div>
+</div>
+
+<!-- Firebase compat SDK: plain scripts, no module-loading restrictions -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- FIREBASE INIT ----------
+  var firebaseConfig = {
+    apiKey: "AIzaSyD6eUkcF1DR5Tj_oMNmJGHDm06XzKLGBg4",
+    authDomain: "expense-tracker-5c250.firebaseapp.com",
+    projectId: "expense-tracker-5c250",
+    storageBucket: "expense-tracker-5c250.firebasestorage.app",
+    messagingSenderId: "770528221263",
+    appId: "1:770528221263:web:d85908f947ff233a07f23a",
+    measurementId: "G-NGR7KC6ESL"
+  };
+
+  if (typeof firebase === "undefined") {
+    document.getElementById("loadingMsg").textContent =
+      "Could not load Firebase. Please check your internet connection and refresh.";
+    return;
+  }
+
+  firebase.initializeApp(firebaseConfig);
+  var auth = firebase.auth();
+  var db = firebase.firestore();
+
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function (err) {
+    console.error("Persistence error:", err);
+  });
+
+  // ---------- DOM REFERENCES ----------
+  function $(id) { return document.getElementById(id); }
+
+  var loadingMsg = $("loadingMsg");
+  var authCard = $("authCard");
+  var appCard = $("appCard");
+  var tabLogin = $("tabLogin");
+  var tabSignup = $("tabSignup");
+  var loginForm = $("loginForm");
+  var signupForm = $("signupForm");
+  var authMsg = $("authMsg");
+
+  var loginBtn = $("loginBtn");
+  var signupBtn = $("signupBtn");
+  var logoutBtn = $("logoutBtn");
+  var userName = $("userName");
+
+  var todayAmount = $("todayAmount");
+  var todayCount = $("todayCount");
+
+  var currencySelect = $("currency");
+  var expenseNameInput = $("expenseName");
+  var expenseAmountInput = $("expenseAmount");
+  var expenseMsg = $("expenseMsg");
+  var addBtn = $("addBtn");
+
+  var historyDiv = $("historyDiv");
+  var clearAllBtn = $("clearAllBtn");
+
+  var currentUser = null;
+  var unsubscribeListener = null;
+  var cachedExpenses = [];
+
+  // ---------- HELPERS ----------
+  function showError(el, message) {
+    el.textContent = message;
+    el.className = "msg-error";
+  }
+  function hideMsg(el) {
+    el.className = "msg-error hidden";
+  }
+  function friendlyError(err) {
+    var code = (err && err.code) ? err.code : "";
+    var map = {
+      "auth/email-already-in-use": "That email is already registered. Try logging in instead.",
+      "auth/invalid-email": "Please enter a valid email address.",
+      "auth/weak-password": "Password must be at least 6 characters.",
+      "auth/user-not-found": "No account found with that email.",
+      "auth/wrong-password": "Incorrect password. Please try again.",
+      "auth/invalid-credential": "Incorrect email or password.",
+      "auth/too-many-requests": "Too many attempts. Please wait and try again.",
+      "auth/network-request-failed": "Network error. Please check your connection.",
+      "permission-denied": "Permission denied. Check your Firestore security rules."
+    };
+    return map[code] || (err && err.message) || "Something went wrong. Please try again.";
+  }
+  function currencySymbol(code) {
+    if (code === "INR") return "Rs. ";
+    if (code === "USD") return "$";
+    if (code === "EUR") return "EUR ";
+    if (code === "GBP") return "GBP ";
+    return code + " ";
+  }
+  function formatAmount(amount, code) {
+    return currencySymbol(code) + Number(amount).toFixed(2);
+  }
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() &&
+           a.getMonth() === b.getMonth() &&
+           a.getDate() === b.getDate();
+  }
+  function escapeHtml(text) {
+    var div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Firebase has loaded and initialized successfully — reveal the auth screen.
+  loadingMsg.classList.add("hidden");
+  authCard.classList.remove("hidden");
+
+  // ---------- TAB SWITCHING ----------
+  tabLogin.addEventListener("click", function () {
+    tabLogin.classList.add("active");
+    tabSignup.classList.remove("active");
+    loginForm.classList.remove("hidden");
+    signupForm.classList.add("hidden");
+    hideMsg(authMsg);
+  });
+  tabSignup.addEventListener("click", function () {
+    tabSignup.classList.add("active");
+    tabLogin.classList.remove("active");
+    signupForm.classList.remove("hidden");
+    loginForm.classList.add("hidden");
+    hideMsg(authMsg);
+  });
+
+  // ---------- SIGN UP ----------
+  signupForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    hideMsg(authMsg);
+
+    var name = $("signupName").value.trim();
+    var email = $("signupEmail").value.trim();
+    var pass = $("signupPassword").value;
+    var confirmPass = $("signupConfirm").value;
+
+    if (!name) { showError(authMsg, "Please enter your full name."); return; }
+    if (!email) { showError(authMsg, "Please enter your email."); return; }
+    if (pass.length < 6) { showError(authMsg, "Password must be at least 6 characters."); return; }
+    if (pass !== confirmPass) { showError(authMsg, "Passwords do not match."); return; }
+
+    signupBtn.disabled = true;
+    signupBtn.textContent = "Creating account...";
+
+    auth.createUserWithEmailAndPassword(email, pass)
+      .then(function (credential) {
+        return credential.user.updateProfile({ displayName: name });
+      })
+      .then(function () {
+        signupForm.reset();
+        // onAuthStateChanged below takes over from here automatically
+      })
+      .catch(function (err) {
+        console.error("Signup error:", err);
+        showError(authMsg, friendlyError(err));
+      })
+      .finally(function () {
+        signupBtn.disabled = false;
+        signupBtn.textContent = "Sign Up";
+      });
+  });
+
+  // ---------- LOG IN ----------
+  loginForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    hideMsg(authMsg);
+
+    var email = $("loginEmail").value.trim();
+    var pass = $("loginPassword").value;
+
+    if (!email || !pass) { showError(authMsg, "Please enter email and password."); return; }
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Logging in...";
+
+    auth.signInWithEmailAndPassword(email, pass)
+      .then(function () {
+        loginForm.reset();
+      })
+      .catch(function (err) {
+        console.error("Login error:", err);
+        showError(authMsg, friendlyError(err));
+      })
+      .finally(function () {
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Log In";
+      });
+  });
+
+  // ---------- LOG OUT ----------
+  logoutBtn.addEventListener("click", function () {
+    auth.signOut().catch(function (err) {
+      console.error("Logout error:", err);
+      alert("Could not log out: " + friendlyError(err));
+    });
+  });
+
+  // ---------- AUTH STATE — runs on load and after every login/logout ----------
+  auth.onAuthStateChanged(function (user) {
+    if (user) {
+      currentUser = user;
+      authCard.classList.add("hidden");
+      appCard.classList.remove("hidden");
+      userName.textContent = user.displayName || user.email || "User";
+      subscribeToExpenses(user.uid);
+    } else {
+      currentUser = null;
+      if (unsubscribeListener) { unsubscribeListener(); unsubscribeListener = null; }
+      cachedExpenses = [];
+      appCard.classList.add("hidden");
+      authCard.classList.remove("hidden");
+    }
+  });
+
+  // ---------- ADD EXPENSE ----------
+  addBtn.addEventListener("click", function () {
+    hideMsg(expenseMsg);
+
+    if (!currentUser) {
+      showError(expenseMsg, "You are not logged in. Please refresh and log in again.");
+      return;
+    }
+
+    var name = expenseNameInput.value.trim();
+    var amountValue = expenseAmountInput.value;
+    var currencyCode = currencySelect.value;
+    var amount = parseFloat(amountValue);
+
+    // VALIDATION — stop immediately if invalid
+    if (!name) {
+      showError(expenseMsg, "Please enter an expense name.");
+      expenseNameInput.focus();
+      return;
+    }
+    if (amountValue === "" || isNaN(amount) || amount <= 0) {
+      showError(expenseMsg, "Please enter a valid amount greater than 0.");
+      expenseAmountInput.focus();
+      return;
+    }
+
+    addBtn.disabled = true;
+    addBtn.textContent = "Saving...";
+
+    var newExpenseRef = db.collection("users").doc(currentUser.uid).collection("expenses").doc();
+
+    newExpenseRef.set({
+      name: name,
+      amount: amount,
+      currency: currencyCode,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    })
+      .then(function () {
+        // SAVE VERIFICATION — confirm the document really exists
+        return newExpenseRef.get();
+      })
+      .then(function (snap) {
+        if (!snap.exists) {
+          throw new Error("Save could not be verified. Please try again.");
+        }
+        expenseNameInput.value = "";
+        expenseAmountInput.value = "";
+        expenseNameInput.focus();
+      })
+      .catch(function (err) {
+        console.error("Add expense error:", err);
+        showError(expenseMsg, "Could not save expense: " + friendlyError(err));
+      })
+      .finally(function () {
+        addBtn.disabled = false;
+        addBtn.textContent = "+ Add Expense";
+      });
+  });
+
+  // Allow pressing Enter inside the amount field to submit
+  expenseAmountInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addBtn.click();
+    }
+  });
+
+  // ---------- REAL-TIME LISTENER ----------
+  function subscribeToExpenses(uid) {
+    if (unsubscribeListener) { unsubscribeListener(); }
+
+    var expensesRef = db.collection("users").doc(uid).collection("expenses").orderBy("createdAt", "desc");
+
+    unsubscribeListener = expensesRef.onSnapshot(function (snapshot) {
+      var list = [];
+      snapshot.forEach(function (docSnap) {
+        var data = docSnap.data();
+        var amount = Number(data.amount);
+        var name = (typeof data.name === "string") ? data.name : "";
+
+        // DATA INTEGRITY — skip corrupted records instead of crashing
+        if (!name || isNaN(amount) || amount <= 0) { return; }
+
+        var date;
+        if (data.createdAt && typeof data.createdAt.toDate === "function") {
+          date = data.createdAt.toDate();
+        } else {
+          date = new Date();
+        }
+
+        list.push({
+          id: docSnap.id,
+          name: name,
+          amount: amount,
+          currency: data.currency || "INR",
+          date: date
+        });
+      });
+
+      renderDashboard(list);
+    }, function (err) {
+      console.error("Listener error:", err);
+      historyDiv.innerHTML = "";
+      var p = document.createElement("p");
+      p.className = "msg-error";
+      p.textContent = "Could not load expenses: " + friendlyError(err);
+      historyDiv.appendChild(p);
+    });
+  }
+
+  // ---------- RECALCULATE + RENDER ----------
+  function renderDashboard(list) {
+    cachedExpenses = list;
+    var now = new Date();
+
+    // Today's total and count — always computed fresh from the list
+    var todaysExpenses = [];
+    for (var i = 0; i < list.length; i++) {
+      if (sameDay(list[i].date, now)) { todaysExpenses.push(list[i]); }
+    }
+    var todayTotal = 0;
+    for (var j = 0; j < todaysExpenses.length; j++) { todayTotal += todaysExpenses[j].amount; }
+
+    todayAmount.textContent = formatAmount(todayTotal, "INR");
+    todayCount.textContent = todaysExpenses.length + " Expense" + (todaysExpenses.length === 1 ? "" : "s") + " Today";
+
+    // Group into Today / Yesterday / Older
+    var yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+
+    var groupToday = [];
+    var groupYesterday = [];
+    var groupOlder = [];
+
+    for (var k = 0; k < list.length; k++) {
+      var exp = list[k];
+      if (sameDay(exp.date, now)) { groupToday.push(exp); }
+      else if (sameDay(exp.date, yesterday)) { groupYesterday.push(exp); }
+      else { groupOlder.push(exp); }
+    }
+
+    historyDiv.innerHTML = "";
+
+    if (list.length === 0) {
+      var emptyP = document.createElement("p");
+      emptyP.className = "empty-msg";
+      emptyP.textContent = "No expenses yet.";
+      historyDiv.appendChild(emptyP);
+      return;
+    }
+
+    renderGroup("TODAY", groupToday);
+    renderGroup("YESTERDAY", groupYesterday);
+    renderGroup("OLDER", groupOlder);
+  }
+
+  function renderGroup(title, items) {
+    if (items.length === 0) { return; }
+
+    var total = 0;
+    for (var i = 0; i < items.length; i++) { total += items[i].amount; }
+
+    var titleEl = document.createElement("div");
+    titleEl.className = "day-title";
+    titleEl.textContent = title + " \u2014 Total: " + formatAmount(total, "INR") + " (" + items.length + ")";
+    historyDiv.appendChild(titleEl);
+
+    for (var j = 0; j < items.length; j++) {
+      var exp = items[j];
+      var row = document.createElement("div");
+      row.className = "expense-item";
+
+      var infoSpan = document.createElement("span");
+      var timeText = exp.date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      infoSpan.innerHTML =
+        '<span class="name">' + escapeHtml(exp.name) + "</span>" +
+        '<span class="time">' + timeText + "</span>";
+
+      var rightSpan = document.createElement("span");
+      rightSpan.className = "right";
+
+      var amountSpan = document.createElement("span");
+      amountSpan.className = "amount";
+      amountSpan.textContent = formatAmount(exp.amount, exp.currency);
+
+      var delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "del-btn";
+      delBtn.textContent = "Delete";
+      delBtn.setAttribute("data-id", exp.id);
+      delBtn.setAttribute("data-name", exp.name);
+
+      rightSpan.appendChild(amountSpan);
+      rightSpan.appendChild(delBtn);
+      row.appendChild(infoSpan);
+      row.appendChild(rightSpan);
+      historyDiv.appendChild(row);
+    }
+  }
+
+  // ---------- DELETE SINGLE (event delegation — works for every rendered row) ----------
+  historyDiv.addEventListener("click", function (e) {
+    var btn = e.target.closest(".del-btn");
+    if (!btn) { return; }
+    var id = btn.getAttribute("data-id");
+    var name = btn.getAttribute("data-name");
+    if (!confirm('Delete "' + name + '"? This cannot be undone.')) { return; }
+
+    db.collection("users").doc(currentUser.uid).collection("expenses").doc(id).delete()
+      .catch(function (err) {
+        console.error("Delete error:", err);
+        alert("Could not delete expense: " + friendlyError(err));
+      });
+  });
+
+  // ---------- CLEAR ALL ----------
+  clearAllBtn.addEventListener("click", function () {
+    if (cachedExpenses.length === 0) {
+      alert("There's nothing to clear.");
+      return;
+    }
+    if (!confirm("Delete all " + cachedExpenses.length + " expense(s)? This cannot be undone.")) { return; }
+
+    var batch = db.batch();
+    for (var i = 0; i < cachedExpenses.length; i++) {
+      var ref = db.collection("users").doc(currentUser.uid).collection("expenses").doc(cachedExpenses[i].id);
+      batch.delete(ref);
+    }
+    batch.commit().catch(function (err) {
+      console.error("Clear all error:", err);
+      alert("Could not clear expenses: " + friendlyError(err));
+    });
+  });
+
+})();
+</script>
 </body>
 </html>
