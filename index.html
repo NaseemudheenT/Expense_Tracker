@@ -4,45 +4,124 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Expence Tracker</title>
+<link rel="icon" type="image/png" href="logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; background: #f5f6fa; color: #10213A; padding: 16px; }
-  .wrap { max-width: 480px; margin: 0 auto; }
-  h1 { text-align: center; font-size: 22px; letter-spacing: 2px; margin-bottom: 4px; }
-  h1 span { display: block; font-size: 12px; color: #C9972C; letter-spacing: 3px; margin-top: 2px; }
-  .card { background: #fff; border-radius: 14px; padding: 18px; margin-top: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
-  label { display: block; font-size: 12px; font-weight: bold; color: #6B7280; margin: 10px 0 4px; }
-  input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fff; color: #10213A; }
-  button { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; font-family: inherit; }
-  .btn-main { width: 100%; background: #C9972C; color: #fff; padding: 12px; font-size: 14px; margin-top: 14px; }
-  .btn-main:disabled { opacity: 0.6; cursor: not-allowed; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 6px; }
-  .tabs button { flex: 1; padding: 10px; background: #eee; color: #10213A; }
-  .tabs button.active { background: #C9972C; color: #fff; }
-  .msg-error { color: #c0392b; font-size: 13px; margin-top: 8px; }
+  body {
+    font-family: 'Poppins', Arial, sans-serif;
+    background: #f4f5f9;
+    color: #14213D;
+    padding: 20px 16px 50px;
+  }
+  .wrap { max-width: 440px; margin: 0 auto; }
+
+  .logo-wrap { text-align: center; margin-bottom: 6px; }
+  .logo-wrap img {
+    width: 110px;
+    height: auto;
+    background: #fff;
+    border-radius: 24px;
+    padding: 10px;
+    box-shadow: 0 6px 20px rgba(20,33,61,0.08);
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px;
+    margin-top: 16px;
+    box-shadow: 0 6px 20px rgba(20,33,61,0.07);
+  }
+
+  label { display: block; font-size: 12px; font-weight: 600; color: #8A8FA3; margin: 14px 0 6px; }
+  input, select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #E8E9F0;
+    border-radius: 10px;
+    font-size: 14px;
+    background: #FAFAFC;
+    color: #14213D;
+    font-family: inherit;
+  }
+  input:focus, select:focus { outline: none; border-color: #C9972C; }
+
+  button { cursor: pointer; border: none; border-radius: 10px; font-weight: 600; font-family: inherit; }
+
+  .btn-main {
+    width: 100%;
+    background: linear-gradient(135deg, #E0B65A, #C9972C);
+    color: #fff;
+    padding: 13px;
+    font-size: 14.5px;
+    margin-top: 16px;
+    border-radius: 999px;
+  }
+  .btn-main:disabled { opacity: 0.65; cursor: not-allowed; }
+
+  .tabs { display: flex; gap: 6px; background: #F0F1F6; padding: 4px; border-radius: 999px; }
+  .tabs button {
+    flex: 1; padding: 10px; background: transparent; color: #6B7280;
+    border-radius: 999px; font-size: 13.5px;
+  }
+  .tabs button.active { background: linear-gradient(135deg, #E0B65A, #C9972C); color: #fff; }
+
+  .msg-error { color: #C0392B; font-size: 13px; margin-top: 10px; line-height: 1.4; }
   .hidden { display: none !important; }
-  .today-box { background: #C9972C; color: #fff; border-radius: 14px; padding: 18px; margin-top: 14px; }
-  .today-box .amount { font-size: 28px; font-weight: bold; margin: 4px 0; }
+
+  .today-box {
+    background: linear-gradient(135deg, #E7C25F, #C9972C 55%, #9A7218);
+    color: #fff;
+    border-radius: 18px;
+    padding: 20px;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    box-shadow: 0 10px 26px rgba(201,151,44,0.32);
+  }
+  .today-left .today-label { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; opacity: 0.9; }
+  .today-left .amount { font-size: 27px; font-weight: 700; margin: 4px 0; }
+  .today-left .today-count { font-size: 12.5px; opacity: 0.95; }
+  .today-date {
+    background: rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 10px 14px;
+    text-align: center;
+    flex-shrink: 0;
+    min-width: 96px;
+  }
+  .today-date svg { width: 18px; height: 18px; margin-bottom: 4px; }
+  .today-date .date-line { font-size: 12.5px; font-weight: 700; }
+  .today-date .day-line { font-size: 11px; opacity: 0.9; margin-top: 1px; }
+
   .top-row { display: flex; justify-content: space-between; align-items: center; }
-  .logout-btn { background: #eee; color: #10213A; padding: 8px 14px; font-size: 12px; }
-  .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; gap: 10px; }
+  .logout-btn { background: #F0F1F6; color: #14213D; padding: 9px 16px; font-size: 12.5px; border-radius: 999px; }
+
+  .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F0F1F6; gap: 10px; }
   .expense-item:last-child { border-bottom: none; }
-  .expense-item .name { font-weight: bold; font-size: 14px; display: block; }
-  .expense-item .time { font-size: 11px; color: #6B7280; display: block; }
-  .expense-item .right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .expense-item .amount { color: #C9972C; font-weight: bold; white-space: nowrap; }
-  .del-btn { background: #fde2e2; color: #c0392b; padding: 6px 10px; font-size: 12px; }
-  .day-title { font-size: 12px; font-weight: bold; color: #6B7280; margin: 14px 0 6px; }
-  .clear-btn { background: #fde2e2; color: #c0392b; padding: 8px 12px; font-size: 12px; }
+  .expense-item .name { font-weight: 600; font-size: 14px; display: block; }
+  .expense-item .time { font-size: 11.5px; color: #8A8FA3; display: block; margin-top: 2px; }
+  .expense-item .right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .expense-item .amount { color: #B9842A; font-weight: 700; white-space: nowrap; font-size: 14px; }
+  .del-btn { background: #FCEAEA; color: #C0392B; padding: 7px 12px; font-size: 12px; border-radius: 8px; }
+
+  .day-title { font-size: 12px; font-weight: 700; color: #8A8FA3; letter-spacing: 0.3px; margin: 16px 0 8px; }
+  .day-title:first-child { margin-top: 0; }
+
+  .clear-btn { background: #FCEAEA; color: #C0392B; padding: 8px 14px; font-size: 12px; border-radius: 999px; }
   .row { display: flex; justify-content: space-between; align-items: center; }
-  .empty-msg { color: #6B7280; font-size: 13px; margin-top: 10px; }
-  #loadingMsg { text-align: center; color: #6B7280; font-size: 13px; margin-top: 14px; }
+  .empty-msg { color: #8A8FA3; font-size: 13.5px; margin-top: 12px; text-align: center; padding: 10px 0; }
+  #loadingMsg { text-align: center; color: #8A8FA3; font-size: 13.5px; margin-top: 18px; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>EXPENCE <span>TRACKER</span></h1>
+  <div class="logo-wrap"><img src="logo.png" alt="Expence Tracker" /></div>
 
   <p id="loadingMsg">Loading...</p>
 
@@ -80,14 +159,21 @@
   <div id="appCard" class="hidden">
 
     <div class="card top-row">
-      <span id="userName" style="font-weight:bold;"></span>
+      <span id="userName" style="font-weight:600;"></span>
       <button type="button" class="logout-btn" id="logoutBtn">Log Out</button>
     </div>
 
     <div class="today-box">
-      <div>TODAY'S EXPENSES</div>
-      <div class="amount" id="todayAmount">0.00</div>
-      <div id="todayCount">0 Expenses Today</div>
+      <div class="today-left">
+        <div class="today-label">TODAY'S EXPENSES</div>
+        <div class="amount" id="todayAmount">0.00</div>
+        <div class="today-count" id="todayCount">0 Expenses Today</div>
+      </div>
+      <div class="today-date">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="white" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <div class="date-line" id="todayDate">--</div>
+        <div class="day-line" id="todayWeekday">--</div>
+      </div>
     </div>
 
     <div class="card">
@@ -149,8 +235,14 @@
   var auth = firebase.auth();
   var db = firebase.firestore();
 
+  // Improves reliability: caches data locally so reads are faster and
+  // queued writes survive brief connection drops.
+  db.enablePersistence().catch(function (err) {
+    console.warn("Offline persistence not enabled:", err.code || err);
+  });
+
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function (err) {
-    console.error("Persistence error:", err);
+    console.error("Auth persistence error:", err);
   });
 
   // ---------- DOM REFERENCES ----------
@@ -172,6 +264,8 @@
 
   var todayAmount = $("todayAmount");
   var todayCount = $("todayCount");
+  var todayDate = $("todayDate");
+  var todayWeekday = $("todayWeekday");
 
   var currencySelect = $("currency");
   var expenseNameInput = $("expenseName");
@@ -208,6 +302,20 @@
       "permission-denied": "Permission denied. Check your Firestore security rules."
     };
     return map[code] || (err && err.message) || "Something went wrong. Please try again.";
+  }
+  // Wraps any promise so the UI never waits forever — if it doesn't
+  // resolve within the given time, the user sees a clear message
+  // instead of an endless spinner.
+  function withTimeout(promise, ms, timeoutMessage) {
+    return new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () {
+        reject(new Error(timeoutMessage));
+      }, ms);
+      promise.then(
+        function (result) { clearTimeout(timer); resolve(result); },
+        function (err) { clearTimeout(timer); reject(err); }
+      );
+    });
   }
   function currencySymbol(code) {
     if (code === "INR") return "Rs. ";
@@ -268,10 +376,13 @@
     signupBtn.disabled = true;
     signupBtn.textContent = "Creating account...";
 
-    auth.createUserWithEmailAndPassword(email, pass)
-      .then(function (credential) {
+    withTimeout(
+      auth.createUserWithEmailAndPassword(email, pass).then(function (credential) {
         return credential.user.updateProfile({ displayName: name });
-      })
+      }),
+      12000,
+      "This is taking longer than expected. Please check your connection and try again."
+    )
       .then(function () {
         signupForm.reset();
         // onAuthStateChanged below takes over from here automatically
@@ -299,7 +410,11 @@
     loginBtn.disabled = true;
     loginBtn.textContent = "Logging in...";
 
-    auth.signInWithEmailAndPassword(email, pass)
+    withTimeout(
+      auth.signInWithEmailAndPassword(email, pass),
+      12000,
+      "This is taking longer than expected. Please check your connection and try again."
+    )
       .then(function () {
         loginForm.reset();
       })
@@ -338,7 +453,7 @@
     }
   });
 
-  // ---------- ADD EXPENSE ----------
+  // ---------- ADD EXPENSE (timeout-protected — never hangs forever) ----------
   addBtn.addEventListener("click", function () {
     hideMsg(expenseMsg);
 
@@ -369,27 +484,22 @@
 
     var newExpenseRef = db.collection("users").doc(currentUser.uid).collection("expenses").doc();
 
-    newExpenseRef.set({
+    var savePromise = newExpenseRef.set({
       name: name,
       amount: amount,
       currency: currencyCode,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    })
+    });
+
+    withTimeout(savePromise, 10000, "Taking longer than expected. Check your connection — it may still save in the background.")
       .then(function () {
-        // SAVE VERIFICATION — confirm the document really exists
-        return newExpenseRef.get();
-      })
-      .then(function (snap) {
-        if (!snap.exists) {
-          throw new Error("Save could not be verified. Please try again.");
-        }
         expenseNameInput.value = "";
         expenseAmountInput.value = "";
         expenseNameInput.focus();
       })
       .catch(function (err) {
         console.error("Add expense error:", err);
-        showError(expenseMsg, "Could not save expense: " + friendlyError(err));
+        showError(expenseMsg, friendlyError(err));
       })
       .finally(function () {
         addBtn.disabled = false;
@@ -453,7 +563,12 @@
     cachedExpenses = list;
     var now = new Date();
 
-    // Today's total and count — always computed fresh from the list
+    // Today's date display
+    todayDate.textContent = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    todayWeekday.textContent = now.toLocaleDateString("en-US", { weekday: "long" });
+
+    // Today's total and count — always computed fresh from the list,
+    // so it automatically resets to zero the moment the date changes.
     var todaysExpenses = [];
     for (var i = 0; i < list.length; i++) {
       if (sameDay(list[i].date, now)) { todaysExpenses.push(list[i]); }
@@ -464,7 +579,7 @@
     todayAmount.textContent = formatAmount(todayTotal, "INR");
     todayCount.textContent = todaysExpenses.length + " Expense" + (todaysExpenses.length === 1 ? "" : "s") + " Today";
 
-    // Group into Today / Yesterday / Older
+    // Group into Today / Yesterday / Older — past days stay saved permanently
     var yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
 
@@ -570,6 +685,22 @@
       console.error("Clear all error:", err);
       alert("Could not clear expenses: " + friendlyError(err));
     });
+  });
+
+  // ---------- AUTOMATIC DAY ROLLOVER ----------
+  // Re-renders from the same cached data on a timer and whenever the tab
+  // becomes visible again, so if the app is left open past midnight,
+  // "Today" automatically becomes empty/fresh and the previous day's
+  // expenses automatically shift into "Yesterday" — without needing a
+  // new expense to be added or the page to be manually refreshed.
+  setInterval(function () {
+    if (currentUser) { renderDashboard(cachedExpenses); }
+  }, 60000);
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && currentUser) {
+      renderDashboard(cachedExpenses);
+    }
   });
 
 })();
