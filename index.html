@@ -8,197 +8,328 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
+  /* ── TOKENS ── */
   :root {
-    --bg: #f4f5f9;
-    --text: #14213D;
-    --muted: #8A8FA3;
-    --card-bg: #fff;
-    --input-bg: #FAFAFC;
-    --input-border: #E8E9F0;
-    --tab-bg: #F0F1F6;
-    --tab-text: #6B7280;
-    --border: #F0F1F6;
-    --danger-bg: #FCEAEA;
-    --danger-text: #C0392B;
-    --amount-color: #B9842A;
-    --shadow: rgba(20,33,61,0.07);
+    --gold:        #C9962B;
+    --gold-2:      #E8BF60;
+    --gold-3:      #96700F;
+    --gold-grad:   linear-gradient(135deg, #EEC96A 0%, #C9962B 55%, #96700F 100%);
+    --gold-glow:   0 8px 28px rgba(201,150,43,0.32);
+
+    --bg:          #F0F2F8;
+    --text:        #111827;
+    --text-2:      #4B5563;
+    --muted:       #9CA3AF;
+    --card:        #FFFFFF;
+    --input-bg:    #F7F8FC;
+    --input-bd:    #E2E5EF;
+    --border:      #E9ECF3;
+    --tab-bg:      #E9ECF3;
+    --tab-txt:     #6B7280;
+    --err-bg:      #FEF2F2;
+    --err:         #B91C1C;
+    --amt:         #92620A;
+    --s1:          0 1px 4px rgba(17,24,39,.05);
+    --s2:          0 4px 18px rgba(17,24,39,.07);
+    --s3:          0 12px 40px rgba(17,24,39,.10);
   }
   [data-theme="dark"] {
-    --bg: #0B1422;
-    --text: #F3F4F8;
-    --muted: #9AA5B8;
-    --card-bg: #131F33;
-    --input-bg: #1B2740;
-    --input-border: #2A3854;
-    --tab-bg: #1B2740;
-    --tab-text: #9AA5B8;
-    --border: #223352;
-    --danger-bg: #3A1C1F;
-    --danger-text: #FF6B6B;
-    --amount-color: #E3B564;
-    --shadow: rgba(0,0,0,0.4);
+    --bg:          #08101E;
+    --text:        #F1F3F9;
+    --text-2:      #9BAABD;
+    --muted:       #64748B;
+    --card:        #0F1C2E;
+    --input-bg:    #162032;
+    --input-bd:    #1F2E42;
+    --border:      #1A2C40;
+    --tab-bg:      #162032;
+    --tab-txt:     #7A8EA6;
+    --err-bg:      #2A1118;
+    --err:         #F87171;
+    --amt:         #D9A44A;
+    --s1:          0 1px 4px rgba(0,0,0,.25);
+    --s2:          0 4px 18px rgba(0,0,0,.40);
+    --s3:          0 12px 40px rgba(0,0,0,.55);
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Poppins', Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    padding: 20px 16px 50px;
-    transition: background 0.2s ease, color 0.2s ease;
-  }
-  .wrap { max-width: 440px; margin: 0 auto; }
-
-  .theme-toggle {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    color: var(--text);
-    border: 1.5px solid var(--input-border);
-    font-size: 17px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 14px var(--shadow);
-    z-index: 50;
-  }
-
-  .logo-wrap { text-align: center; margin-bottom: 6px; }
-  .logo-wrap img {
-    width: 110px;
-    height: auto;
-    background: #fff;
-    border-radius: 24px;
-    padding: 10px;
-    box-shadow: 0 6px 20px rgba(20,33,61,0.08);
-  }
-
-  .card {
-    background: var(--card-bg);
-    border-radius: 18px;
-    padding: 22px;
-    margin-top: 16px;
-    box-shadow: 0 6px 20px var(--shadow);
-  }
-
-  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 14px 0 6px; }
-  input, select {
-    width: 100%;
-    padding: 12px 14px;
-    border: 1.5px solid var(--input-border);
-    border-radius: 10px;
-    font-size: 14px;
-    background: var(--input-bg);
-    color: var(--text);
-    font-family: inherit;
-  }
-  input:focus, select:focus { outline: none; border-color: #C9972C; }
-
-  button { cursor: pointer; border: none; border-radius: 10px; font-weight: 600; font-family: inherit; }
-
-  .btn-main {
-    width: 100%;
-    background: linear-gradient(135deg, #E0B65A, #C9972C);
-    color: #fff;
-    padding: 13px;
-    font-size: 14.5px;
-    margin-top: 16px;
-    border-radius: 999px;
-  }
-  .btn-main:disabled { opacity: 0.65; cursor: not-allowed; }
-
-  .tabs { display: flex; gap: 6px; background: var(--tab-bg); padding: 4px; border-radius: 999px; }
-  .tabs button {
-    flex: 1; padding: 10px; background: transparent; color: var(--tab-text);
-    border-radius: 999px; font-size: 13.5px;
-  }
-  .tabs button.active { background: linear-gradient(135deg, #E0B65A, #C9972C); color: #fff; }
-
-  .msg-error { color: var(--danger-text); font-size: 13px; margin-top: 10px; line-height: 1.4; }
+  /* ── RESET ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   .hidden { display: none !important; }
 
-  .today-box {
-    background: linear-gradient(135deg, #E7C25F, #C9972C 55%, #9A7218);
-    color: #fff;
-    border-radius: 18px;
-    padding: 20px;
-    margin-top: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    box-shadow: 0 10px 26px rgba(201,151,44,0.32);
+  /* ── BASE ── */
+  body {
+    font-family: 'Poppins', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding-bottom: 60px;
+    -webkit-font-smoothing: antialiased;
+    transition: background .3s, color .3s;
   }
-  .today-left .today-label { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; opacity: 0.9; }
-  .today-left .amount { font-size: 27px; font-weight: 700; margin: 4px 0; }
-  .today-left .today-count { font-size: 12.5px; opacity: 0.95; }
-  .today-date {
-    background: rgba(255,255,255,0.2);
-    border-radius: 12px;
-    padding: 10px 14px;
-    text-align: center;
-    flex-shrink: 0;
-    min-width: 96px;
+
+  /* ── THEME BUTTON ── */
+  .theme-toggle {
+    position: fixed; top: 20px; right: 20px; z-index: 200;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--card); border: 1.5px solid var(--input-bd);
+    color: var(--text); font-size: 17px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--s2); transition: background .3s, border-color .3s;
   }
-  .today-date svg { width: 18px; height: 18px; margin-bottom: 4px; }
-  .today-date .date-line { font-size: 12.5px; font-weight: 700; }
-  .today-date .day-line { font-size: 11px; opacity: 0.9; margin-top: 1px; }
 
-  .top-row { display: flex; justify-content: space-between; align-items: center; }
-  .logout-btn { background: var(--tab-bg); color: var(--text); padding: 9px 16px; font-size: 12.5px; border-radius: 999px; }
+  /* ── LAYOUT ── */
+  .wrap { max-width: 420px; margin: 0 auto; padding: 0 18px 24px; }
 
-  .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 10px; }
-  .expense-item:last-child { border-bottom: none; }
-  .expense-item .name { font-weight: 600; font-size: 14px; display: block; }
-  .expense-item .time { font-size: 11.5px; color: var(--muted); display: block; margin-top: 2px; }
-  .expense-item .right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .expense-item .amount { color: var(--amount-color); font-weight: 700; white-space: nowrap; font-size: 14px; }
-  .del-btn { background: var(--danger-bg); color: var(--danger-text); padding: 7px 12px; font-size: 12px; border-radius: 8px; }
+  /* ── HEADER ── */
+  .page-header { text-align: center; padding: 40px 0 24px; }
+  .page-header img {
+    width: 80px; height: 80px; object-fit: contain;
+    background: #fff; border-radius: 24px; padding: 9px;
+    box-shadow: 0 4px 20px rgba(201,150,43,.20);
+  }
+  .page-header h2 {
+    font-size: 18px; font-weight: 700; letter-spacing: 3.5px;
+    color: var(--text); margin-top: 12px;
+  }
+  .page-header p {
+    font-size: 10px; font-weight: 600; letter-spacing: 4px;
+    color: var(--gold); margin-top: 3px; opacity: .85;
+  }
 
-  .day-title { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.3px; margin: 16px 0 8px; }
-  .day-title:first-child { margin-top: 0; }
+  #loadingMsg { text-align: center; color: var(--muted); font-size: 13px; margin-top: 28px; }
 
-  .clear-btn { background: var(--danger-bg); color: var(--danger-text); padding: 8px 14px; font-size: 12px; border-radius: 999px; }
-  .row { display: flex; justify-content: space-between; align-items: center; }
-  .empty-msg { color: var(--muted); font-size: 13.5px; margin-top: 12px; text-align: center; padding: 10px 0; }
-  #loadingMsg { text-align: center; color: var(--muted); font-size: 13.5px; margin-top: 18px; }
+  /* ── CARD ── */
+  .card {
+    background: var(--card); border-radius: 20px;
+    padding: 22px 22px 24px; margin-top: 14px;
+    box-shadow: var(--s2); border: 1px solid var(--border);
+    transition: background .3s, border-color .3s;
+  }
 
-  /* ---------- SIMPLE CALCULATOR ---------- */
-  .calc-toggle-btn { background: var(--tab-bg); color: var(--text); padding: 8px 14px; font-size: 12.5px; border-radius: 999px; margin-top: 10px; }
+  /* ── LABELS + INPUTS ── */
+  label {
+    display: block; font-size: 10.5px; font-weight: 700;
+    letter-spacing: .7px; text-transform: uppercase;
+    color: var(--muted); margin: 16px 0 7px;
+  }
+  input, select {
+    width: 100%; padding: 13px 16px;
+    border: 1.5px solid var(--input-bd); border-radius: 12px;
+    font-size: 14px; background: var(--input-bg); color: var(--text);
+    font-family: inherit;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus, select:focus {
+    outline: none; border-color: var(--gold);
+    box-shadow: 0 0 0 3.5px rgba(201,150,43,.13);
+  }
+  input::placeholder { color: var(--muted); opacity: .6; }
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%239CA3AF' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px;
+  }
 
-  /* password wrapper */
+  /* ── BUTTONS ── */
+  button { cursor: pointer; border: none; font-family: inherit; font-weight: 600; }
+  .btn-main {
+    width: 100%; background: var(--gold-grad); color: #fff;
+    padding: 14px; font-size: 14.5px; font-weight: 700;
+    border-radius: 999px; margin-top: 18px; letter-spacing: .2px;
+    box-shadow: var(--gold-glow);
+    transition: opacity .15s, transform .15s, box-shadow .15s;
+  }
+  .btn-main:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+  .btn-main:active:not(:disabled) { transform: translateY(0); }
+  .btn-main:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+  /* ── AUTH TABS ── */
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--tab-bg); padding: 4px; border-radius: 999px;
+  }
+  .tabs button {
+    flex: 1; padding: 10px 0; background: transparent;
+    color: var(--tab-txt); border-radius: 999px; font-size: 13.5px;
+    transition: background .2s, color .2s;
+  }
+  .tabs button.active { background: var(--gold-grad); color: #fff; }
+
+  /* ── PASSWORD FIELD ── */
   .pw-wrap { position: relative; }
-  .pw-wrap input { padding-right: 44px; }
+  .pw-wrap input { padding-right: 46px; }
   .pw-eye {
-    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; padding: 4px; color: var(--muted);
-    font-size: 16px; line-height: 1; border-radius: 4px;
+    position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--muted); font-size: 15px;
+    line-height: 1; padding: 4px; border-radius: 4px; cursor: pointer;
   }
-  .calc-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+  /* ── ERROR MESSAGE ── */
+  .msg-error {
+    font-size: 12.5px; color: var(--err);
+    background: var(--err-bg); border-radius: 10px;
+    padding: 10px 14px; margin-top: 12px; line-height: 1.55;
+  }
+
+  /* ── USER BAR ── */
+  .user-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 18px; background: var(--card);
+    border-radius: 20px; margin-top: 14px;
+    box-shadow: var(--s1); border: 1px solid var(--border);
+    transition: background .3s, border-color .3s;
+  }
+  .user-bar-left { display: flex; align-items: center; gap: 11px; }
+  .user-avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: var(--gold-grad); color: #fff;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .user-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+  .logout-btn {
+    background: var(--input-bg); color: var(--text-2);
+    border: 1px solid var(--input-bd);
+    padding: 7px 15px; font-size: 12px; border-radius: 999px;
+  }
+
+  /* ── TODAY CARD ── */
+  .today-box {
+    background: var(--gold-grad); color: #fff;
+    border-radius: 22px; padding: 22px 20px 22px 24px;
+    margin-top: 14px; position: relative; overflow: hidden;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    box-shadow: var(--gold-glow);
+  }
+  .today-box::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 120% -30%, rgba(255,255,255,.13) 0%, transparent 60%);
+  }
+  .today-left { position: relative; z-index: 1; }
+  .today-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    opacity: .82; text-transform: uppercase;
+  }
+  .today-left .amount {
+    font-size: 34px; font-weight: 800; line-height: 1.1;
+    margin: 6px 0 5px; letter-spacing: -0.5px;
+  }
+  .today-count { font-size: 12px; opacity: .88; font-weight: 500; }
+  .today-date {
+    background: rgba(255,255,255,.17); border-radius: 16px;
+    padding: 12px 14px; text-align: center; flex-shrink: 0;
+    min-width: 96px; position: relative; z-index: 1;
+    backdrop-filter: blur(6px);
+  }
+  .today-date svg { width: 16px; height: 16px; display: block; margin: 0 auto 5px; }
+  .today-date .date-line { font-size: 12px; font-weight: 700; }
+  .today-date .day-line { font-size: 10.5px; opacity: .82; margin-top: 2px; }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: 9.5px; font-weight: 800; letter-spacing: 1.5px;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 0;
+  }
+
+  /* ── CALCULATOR ── */
+  .calc-toggle-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--input-bg); color: var(--text-2);
+    border: 1.5px solid var(--input-bd);
+    padding: 8px 16px; font-size: 12px; border-radius: 999px;
+    margin-top: 12px;
+  }
+  .calc-panel { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
   .calc-display {
-    width: 100%; padding: 14px; font-size: 20px; text-align: right;
-    border-radius: 10px; border: 1.5px solid var(--input-border);
-    background: var(--input-bg); color: var(--text); margin-bottom: 10px;
+    width: 100%; padding: 13px 16px; font-size: 24px; font-weight: 700;
+    text-align: right; border-radius: 12px;
+    border: 1.5px solid var(--input-bd);
+    background: var(--input-bg); color: var(--text);
+    margin-bottom: 12px; font-family: inherit;
   }
-  .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .calc-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }
   .calc-btn {
-    padding: 14px 0; border-radius: 10px; background: var(--input-bg);
-    color: var(--text); font-size: 16px; font-weight: 600; border: 1px solid var(--input-border);
+    padding: 15px 0; border-radius: 11px;
+    background: var(--input-bg); color: var(--text);
+    font-size: 16px; font-weight: 600; border: 1px solid var(--input-bd);
+    transition: opacity .1s;
   }
-  .calc-op { background: var(--tab-bg); }
-  .calc-equals { grid-column: 1 / -1; margin-top: 8px; background: linear-gradient(135deg, #E0B65A, #C9972C); color: #fff; padding: 14px 0; font-size: 16px; }
+  .calc-btn:active { opacity: .7; }
+  .calc-op {
+    background: var(--card); color: var(--gold);
+    border-color: rgba(201,150,43,.25); font-size: 17px;
+  }
+  .calc-equals {
+    grid-column: 1 / -1; margin-top: 4px;
+    background: var(--gold-grad); color: #fff;
+    padding: 14px 0; font-size: 16px; border-radius: 11px;
+    box-shadow: 0 4px 14px rgba(201,150,43,.28);
+  }
   .calc-use-btn { margin-top: 10px; }
+
+  /* ── HISTORY ── */
+  .history-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .clear-btn {
+    background: var(--err-bg); color: var(--err);
+    padding: 7px 13px; font-size: 11.5px; border-radius: 999px; border: none;
+  }
+  .day-section { margin-top: 18px; }
+  .day-section:first-child { margin-top: 10px; }
+  .day-badge { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .day-badge-label {
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .day-badge-total {
+    font-size: 10.5px; font-weight: 700; color: var(--gold);
+    background: rgba(201,150,43,.10); padding: 2px 10px; border-radius: 999px;
+  }
+  .expense-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 0; border-bottom: 1px solid var(--border);
+  }
+  .expense-item:last-child { border-bottom: none; }
+  .exp-icon {
+    width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(238,201,106,.18), rgba(201,150,43,.10));
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .exp-info { flex: 1; min-width: 0; }
+  .expense-item .name {
+    font-size: 13.5px; font-weight: 600; display: block;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .expense-item .time {
+    font-size: 11px; color: var(--muted); display: block; margin-top: 2px;
+  }
+  .exp-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .expense-item .amount {
+    font-size: 13.5px; font-weight: 700; color: var(--amt); white-space: nowrap;
+  }
+  .del-btn {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: var(--err-bg); color: var(--err);
+    font-size: 12px; display: flex; align-items: center; justify-content: center;
+  }
+  .empty-msg {
+    text-align: center; color: var(--muted); font-size: 13px;
+    padding: 28px 0 8px; line-height: 1.7;
+  }
+  .row { display: flex; justify-content: space-between; align-items: center; }
 </style>
+
 </head>
 <body>
 <button type="button" id="themeToggle" class="theme-toggle">🌙</button>
 <div class="wrap">
 
-  <div class="logo-wrap"><img src="logo.png" alt="Expence Tracker" /></div>
+  <div class="page-header">
+    <img src="logo.png" alt="Expence Tracker" />
+    <h2>EXPENCE</h2>
+    <p>— TRACKER —</p>
+  </div>
 
   <p id="loadingMsg">Loading...</p>
 
@@ -244,8 +375,11 @@
   <!-- MAIN APP -->
   <div id="appCard" class="hidden">
 
-    <div class="card top-row">
-      <span id="userName" style="font-weight:600;"></span>
+    <div class="user-bar">
+      <div class="user-bar-left">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <span class="user-name" id="userName"></span>
+      </div>
       <button type="button" class="logout-btn" id="logoutBtn">Log Out</button>
     </div>
 
@@ -263,6 +397,7 @@
     </div>
 
     <div class="card">
+      <p class="section-title">Add New Expense</p>
       <label for="currency">Currency</label>
       <select id="currency">
         <option value="INR" selected>₹ INR</option>
@@ -271,9 +406,9 @@
         <option value="GBP">£ GBP</option>
       </select>
       <label for="expenseName">Expense Name</label>
-      <input type="text" id="expenseName" placeholder="e.g. Lunch" />
+      <input type="text" id="expenseName" />
       <label for="expenseAmount">Amount</label>
-      <input type="number" id="expenseAmount" placeholder="e.g. 150" min="0.01" step="0.01" />
+      <input type="number" id="expenseAmount" min="0.01" step="0.01" />
       <button type="button" id="calcToggleBtn" class="calc-toggle-btn">🧮 Calculator</button>
 
       <div id="calcPanel" class="calc-panel hidden">
@@ -309,8 +444,8 @@
     </div>
 
     <div class="card">
-      <div class="row">
-        <strong style="font-size:13px;">EXPENSE HISTORY</strong>
+      <div class="history-header">
+        <p class="section-title">Expense History</p>
         <button type="button" class="clear-btn" id="clearAllBtn">Clear All</button>
       </div>
       <div id="historyDiv">
@@ -595,7 +730,9 @@
       currentUser = user;
       authCard.classList.add("hidden");
       appCard.classList.remove("hidden");
-      userName.textContent = user.displayName || user.email || "User";
+      var displayName = user.displayName || user.email || "User";
+      userName.textContent = displayName;
+      document.getElementById("userAvatar").textContent = displayName.charAt(0).toUpperCase();
       subscribeToExpenses(user.uid);
     } else {
       currentUser = null;
@@ -644,7 +781,7 @@
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    withTimeout(savePromise, 10000, "Taking longer than expected. Check your connection — it may still save in the background.")
+    withTimeout(savePromise, 10000, "")
       .then(function () {
         expenseNameInput.value = "";
         expenseAmountInput.value = "";
@@ -652,7 +789,9 @@
       })
       .catch(function (err) {
         console.error("Add expense error:", err);
-        showError(expenseMsg, friendlyError(err));
+        if (err && err.message) {
+          showError(expenseMsg, friendlyError(err));
+        }
       })
       .finally(function () {
         addBtn.disabled = false;
@@ -872,24 +1011,37 @@
     var total = 0;
     for (var i = 0; i < items.length; i++) { total += items[i].amount; }
 
-    var titleEl = document.createElement("div");
-    titleEl.className = "day-title";
-    titleEl.textContent = title + " \u2014 Total: " + formatAmount(total, "INR") + " (" + items.length + ")";
-    historyDiv.appendChild(titleEl);
+    var section = document.createElement("div");
+    section.className = "day-section";
+
+    var badge = document.createElement("div");
+    badge.className = "day-badge";
+    badge.innerHTML =
+      '<span class="day-badge-label">' + title + '</span>' +
+      '<span class="day-badge-total">' + formatAmount(total, "INR") + ' &middot; ' + items.length + '</span>';
+    section.appendChild(badge);
+
+    var expenseEmoji = ["💳","🧾","🍽️","⛽","🛒","☕","📦","🎯","💊","🎬"];
 
     for (var j = 0; j < items.length; j++) {
       var exp = items[j];
       var row = document.createElement("div");
       row.className = "expense-item";
 
-      var infoSpan = document.createElement("span");
-      var timeText = exp.date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-      infoSpan.innerHTML =
-        '<span class="name">' + escapeHtml(exp.name) + "</span>" +
-        '<span class="time">' + timeText + "</span>";
+      var icon = document.createElement("div");
+      icon.className = "exp-icon";
+      icon.textContent = expenseEmoji[j % expenseEmoji.length];
 
-      var rightSpan = document.createElement("span");
-      rightSpan.className = "right";
+      var info = document.createElement("div");
+      info.className = "exp-info";
+      var timeText = exp.date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      var dateText = exp.date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+      info.innerHTML =
+        '<span class="name">' + escapeHtml(exp.name) + '</span>' +
+        '<span class="time">' + dateText + ' &nbsp;·&nbsp; ' + timeText + '</span>';
+
+      var right = document.createElement("div");
+      right.className = "exp-right";
 
       var amountSpan = document.createElement("span");
       amountSpan.className = "amount";
@@ -898,16 +1050,19 @@
       var delBtn = document.createElement("button");
       delBtn.type = "button";
       delBtn.className = "del-btn";
-      delBtn.textContent = "Delete";
+      delBtn.textContent = "✕";
       delBtn.setAttribute("data-id", exp.id);
       delBtn.setAttribute("data-name", exp.name);
 
-      rightSpan.appendChild(amountSpan);
-      rightSpan.appendChild(delBtn);
-      row.appendChild(infoSpan);
-      row.appendChild(rightSpan);
-      historyDiv.appendChild(row);
+      right.appendChild(amountSpan);
+      right.appendChild(delBtn);
+      row.appendChild(icon);
+      row.appendChild(info);
+      row.appendChild(right);
+      section.appendChild(row);
     }
+
+    historyDiv.appendChild(section);
   }
 
   // ---------- DELETE SINGLE (event delegation — works for every rendered row) ----------
