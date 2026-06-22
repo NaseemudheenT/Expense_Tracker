@@ -6,7 +6,7 @@
 <title>Expence Tracker</title>
 
 <!-- PWA -->
-<link rel="manifest" href="manifest.json"/>
+<link rel="manifest" href="/Expense_Tracker/manifest.json"/>
 <meta name="theme-color" content="#C9A84C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -1254,10 +1254,10 @@ window.switchNav=(tab,btn)=>{
 
 // Register Service Worker
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(()=>{
+  navigator.serviceWorker.register('/Expense_Tracker/sw.js', {scope: '/Expense_Tracker/'}).then(()=>{
     console.log('Service Worker registered');
     detectInstallState();
-  }).catch(()=>{});
+  }).catch((e)=>{console.log('SW error',e);});
 }
 
 // Initial detection
