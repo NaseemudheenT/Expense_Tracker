@@ -246,6 +246,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .btn-install{background:var(--gold-gradient);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
 .btn-dismiss{background:rgba(255,255,255,0.1);border:none;border-radius:10px;padding:8px 10px;color:rgba(255,255,255,0.7);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
 
+/* LOADING */
+.loading-state{text-align:center;padding:40px 20px;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top:3px solid var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-state p{font-size:13px;color:var(--text-muted);}
+
+@media(max-width:400px){
+  .summary-amount{font-size:28px;}
+  .form-row{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
@@ -501,6 +511,62 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       </div>
       <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
     </div>
+
+    <!-- Install App Card -->
+    <div id="install-card" style="display:none">
+      <div style="margin-bottom:10px;font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.8px;text-transform:uppercase;">Install App</div>
+      <div style="background:var(--gold-gradient);border-radius:18px;padding:22px 20px;margin-bottom:10px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,0.08);border-radius:50%;"></div>
+        <div style="display:flex;align-items:center;gap:14px;position:relative;z-index:1;">
+          <div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">💰</div>
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#fff;">Expence Tracker</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;">Install as app on your device</div>
+          </div>
+        </div>
+        <button id="btn-install-main" onclick="installApp()" style="margin-top:16px;width:100%;padding:13px;background:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;color:#C9A84C;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;z-index:1;">
+          <i class="fas fa-download"></i> Install App Now
+        </button>
+      </div>
+    </div>
+
+    <!-- iOS Manual Install -->
+    <div id="ios-install-card" style="display:none">
+      <div style="margin-bottom:10px;font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.8px;text-transform:uppercase;">Install App on iPhone</div>
+      <div style="background:var(--card);border-radius:18px;padding:20px;border:1.5px solid var(--gold);margin-bottom:10px;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px;"><i class="fab fa-apple" style="color:var(--gold)"></i> Add to Home Screen</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:32px;height:32px;background:var(--gold-gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;">1</div>
+            <div style="font-size:13px;color:var(--text);">Open this site in <strong>Safari</strong> browser</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:32px;height:32px;background:var(--gold-gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;">2</div>
+            <div style="font-size:13px;color:var(--text);">Tap the <strong>Share</strong> button <span style="font-size:16px;">⎋</span> at the bottom</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:32px;height:32px;background:var(--gold-gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;">3</div>
+            <div style="font-size:13px;color:var(--text);">Scroll and tap <strong>"Add to Home Screen"</strong></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:32px;height:32px;background:var(--gold-gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;">4</div>
+            <div style="font-size:13px;color:var(--text);">Tap <strong>"Add"</strong> — done! ✅</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Already Installed -->
+    <div id="installed-card" style="display:none;background:var(--card);border-radius:16px;padding:16px 18px;border:1.5px solid var(--success);margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:38px;height:38px;background:rgba(46,204,113,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">✅</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">App Installed</div>
+          <div style="font-size:12px;color:var(--text-muted);">Expence Tracker is on your home screen</div>
+        </div>
+      </div>
+    </div>
+
     <button class="btn-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
   </div>
 
@@ -662,15 +728,45 @@ function showAuth(){
   document.getElementById('auth-screen').style.display='flex';
   document.getElementById('app-screen').style.display='none';
   expenses=[];
+  try{localStorage.removeItem(CACHE_KEY);}catch(e){}
 }
 
 // ===== FIREBASE EXPENSES =====
+const CACHE_KEY='exptrack_expenses_cache';
+
+function saveToCache(data){
+  try{localStorage.setItem(CACHE_KEY,JSON.stringify(data));}catch(e){}
+}
+function loadFromCache(){
+  try{const d=localStorage.getItem(CACHE_KEY);return d?JSON.parse(d):[];}catch(e){return[];}
+}
+
 function subscribeExpenses(uid){
   if(unsubscribe)unsubscribe();
+
+  // 1. Show cached data INSTANTLY so page never looks empty on refresh
+  const cached=loadFromCache();
+  if(cached.length>0){
+    expenses=cached;
+    renderAll();
+  } else {
+    // Show loading spinner while first load
+    document.getElementById('history-list').innerHTML=
+      '<div class="loading-state"><div class="spinner"></div><p>Loading your expenses...</p></div>';
+  }
+
+  // 2. Subscribe to Firebase — updates in background
   const q=query(collection(db,'users',uid,'expenses'),orderBy('timestamp','desc'));
   unsubscribe=onSnapshot(q,(snap)=>{
     expenses=snap.docs.map(d=>({id:d.id,...d.data()}));
+    saveToCache(expenses); // save fresh data to cache
     renderAll();
+  },(err)=>{
+    // If offline, cached data is already showing — just show a subtle note
+    if(expenses.length===0){
+      document.getElementById('history-list').innerHTML=
+        '<div class="empty-state"><i class="fas fa-wifi-slash"></i><p>You\'re offline. Connect to load expenses.</p></div>';
+    }
   });
 }
 
@@ -1078,12 +1174,34 @@ setTimeout(()=>{
 updateDate();
 setInterval(updateDate,60000);
 
-// ===== PWA =====
+// ===== PWA INSTALL =====
 let deferredPrompt=null;
+
+function detectInstallState(){
+  const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  if(isInstalled){
+    document.getElementById('installed-card').style.display='block';
+    document.getElementById('install-card').style.display='none';
+    document.getElementById('ios-install-card').style.display='none';
+    document.getElementById('install-banner').style.display='none';
+  } else if(isIOS&&isSafari){
+    document.getElementById('ios-install-card').style.display='block';
+    document.getElementById('install-card').style.display='none';
+  } else if(deferredPrompt){
+    document.getElementById('install-card').style.display='block';
+  } else {
+    // Chrome on Mac/Desktop — show install card anyway, clicking will guide user
+    document.getElementById('install-card').style.display='block';
+  }
+}
 
 window.addEventListener('beforeinstallprompt',(e)=>{
   e.preventDefault();
   deferredPrompt=e;
+  detectInstallState();
   if(!localStorage.getItem('exptrack_install_dismissed')){
     setTimeout(()=>{
       if(document.getElementById('app-screen').style.display!=='none'){
@@ -1094,13 +1212,24 @@ window.addEventListener('beforeinstallprompt',(e)=>{
 });
 
 window.installApp=async()=>{
-  if(!deferredPrompt)return;
-  deferredPrompt.prompt();
-  const{outcome}=await deferredPrompt.userChoice;
-  if(outcome==='accepted'){
-    showToast('App installed successfully!','success');
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const{outcome}=await deferredPrompt.userChoice;
+    if(outcome==='accepted'){
+      showToast('App installed successfully! 🎉','success');
+      document.getElementById('install-card').style.display='none';
+      document.getElementById('installed-card').style.display='block';
+    }
+    deferredPrompt=null;
+  } else {
+    // Guide user manually
+    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    if(isIOS){
+      showToast('Open in Safari → Share → Add to Home Screen','success');
+    } else {
+      showToast('Click the install icon in your browser address bar ↑','success');
+    }
   }
-  deferredPrompt=null;
   document.getElementById('install-banner').style.display='none';
 };
 
@@ -1111,15 +1240,28 @@ window.dismissInstall=()=>{
 
 window.addEventListener('appinstalled',()=>{
   document.getElementById('install-banner').style.display='none';
-  showToast('Expence Tracker installed!','success');
+  document.getElementById('install-card').style.display='none';
+  document.getElementById('installed-card').style.display='block';
+  showToast('Expence Tracker installed! 🎉','success');
 });
+
+// Run detection when settings tab opens
+const _origSwitchNav=window.switchNav;
+window.switchNav=(tab,btn)=>{
+  _origSwitchNav(tab,btn);
+  if(tab==='settings')detectInstallState();
+};
 
 // Register Service Worker
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(()=>{
     console.log('Service Worker registered');
+    detectInstallState();
   }).catch(()=>{});
 }
+
+// Initial detection
+setTimeout(detectInstallState, 500);
 </script>
 </body>
 </html>
