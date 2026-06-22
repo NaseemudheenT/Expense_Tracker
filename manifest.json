@@ -1,13 +1,13 @@
-{
+ {
   "name": "Expence Tracker",
   "short_name": "Expence",
-  "description": "Track your expenses anytime, anywhere.",
-  "start_url": "/Expense_Tracker/index.html",
-  "scope": "/Expense_Tracker/",
+  "description": "Track your expenses anytime, anywhere. Multi-currency support for world travelers.",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#1A2340",
   "theme_color": "#C9A84C",
   "orientation": "portrait",
+  "scope": ".",
   "icons": [
     {
       "src": "icon-192.png",
