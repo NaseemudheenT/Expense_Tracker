@@ -37,11 +37,11 @@ footer a{color:#C9A84C;text-decoration:none;margin:0 8px;}
 </head>
 <body>
 <nav class="nav">
-  <a href="index.html" class="nav-logo">
+  <a href="/Expense_Tracker/index.html" class="nav-logo">
     <div class="nav-logo-icon"><i class="fas fa-wallet"></i></div>
     <span class="nav-logo-name">EX<span>PENCE</span></span>
   </a>
-  <a href="index.html" class="nav-back"><i class="fas fa-arrow-left"></i> Back to App</a>
+  <a href="/Expense_Tracker/index.html" class="nav-back"><i class="fas fa-arrow-left"></i> Back to App</a>
 </nav>
 <div class="container">
   <div class="page-title">About Expence Tracker</div>
@@ -73,15 +73,15 @@ footer a{color:#C9A84C;text-decoration:none;margin:0 8px;}
   <div class="cta">
     <h2>Start Tracking Today</h2>
     <p>Free forever. No credit card required.</p>
-    <a href="index.html">Open App</a>
+    <a href="/Expense_Tracker/index.html">Open App</a>
   </div>
 </div>
 <footer>
   © 2026 Expence Tracker · 
-  <a href="about.html">About</a>
-  <a href="privacy.html">Privacy Policy</a>
-  <a href="contact.html">Contact</a>
-  <a href="terms.html">Terms</a>
+  <a href="/Expense_Tracker/about.html">About</a>
+  <a href="/Expense_Tracker/privacy.html">Privacy Policy</a>
+  <a href="/Expense_Tracker/contact.html">Contact</a>
+  <a href="/Expense_Tracker/terms.html">Terms</a>
 </footer>
 </body>
 </html>
