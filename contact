@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Contact — Expence Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#F8F9FC;color:#1A2340;}
+.nav{background:#fff;border-bottom:1px solid #E8EBF4;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#C9A84C,#E8C96B,#A07830);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;}
+.nav-logo-name{font-size:16px;font-weight:900;letter-spacing:1.5px;color:#1A2340;}
+.nav-logo-name span{color:#C9A84C;}
+.nav-back{color:#C9A84C;text-decoration:none;font-size:14px;font-weight:600;}
+.container{max-width:720px;margin:0 auto;padding:48px 24px;}
+.page-title{font-size:32px;font-weight:900;color:#1A2340;margin-bottom:8px;}
+.page-subtitle{font-size:16px;color:#6B7A99;margin-bottom:40px;}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:40px;}
+@media(max-width:600px){.contact-grid{grid-template-columns:1fr;}}
+.contact-card{background:#fff;border-radius:16px;padding:24px;border:1px solid #E8EBF4;box-shadow:0 2px 8px rgba(26,35,64,0.06);text-align:center;}
+.contact-card i{font-size:28px;color:#C9A84C;margin-bottom:12px;display:block;}
+.contact-card h3{font-size:15px;font-weight:700;color:#1A2340;margin-bottom:6px;}
+.contact-card p{font-size:13px;color:#6B7A99;line-height:1.6;}
+.contact-card a{color:#C9A84C;text-decoration:none;font-weight:600;}
+.form-card{background:#fff;border-radius:20px;padding:32px;border:1px solid #E8EBF4;box-shadow:0 2px 16px rgba(26,35,64,0.08);}
+.form-card h2{font-size:20px;font-weight:800;margin-bottom:20px;color:#1A2340;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:12px;font-weight:700;color:#6B7A99;margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase;}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:12px 16px;border:1.5px solid #E8EBF4;border-radius:12px;background:#F8F9FC;color:#1A2340;font-size:14px;font-family:'Inter',sans-serif;outline:none;}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:#C9A84C;}
+.form-group textarea{min-height:120px;resize:vertical;}
+.btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,#C9A84C,#E8C96B,#A07830);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 4px 14px rgba(201,168,76,0.35);}
+.success-msg{background:#d4edda;color:#155724;border-radius:12px;padding:14px;text-align:center;font-size:14px;font-weight:600;display:none;margin-top:12px;}
+footer{text-align:center;padding:32px 24px;color:#6B7A99;font-size:13px;border-top:1px solid #E8EBF4;margin-top:40px;}
+footer a{color:#C9A84C;text-decoration:none;margin:0 8px;}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"><i class="fas fa-wallet"></i></div>
+    <span class="nav-logo-name">EX<span>PENCE</span></span>
+  </a>
+  <a href="index.html" class="nav-back"><i class="fas fa-arrow-left"></i> Back to App</a>
+</nav>
+<div class="container">
+  <div class="page-title">Contact Us</div>
+  <div class="page-subtitle">We'd love to hear from you. Send us a message and we'll respond as soon as possible.</div>
+
+  <div class="contact-grid">
+    <div class="contact-card">
+      <i class="fas fa-envelope"></i>
+      <h3>Email Support</h3>
+      <p>For general questions and support<br/><a href="mailto:t.naseemudheen@gmail.com">t.naseemudheen@gmail.com</a></p>
+    </div>
+    <div class="contact-card">
+      <i class="fas fa-bug"></i>
+      <h3>Report a Bug</h3>
+      <p>Found an issue? Let us know and we'll fix it quickly.</p>
+    </div>
+    <div class="contact-card">
+      <i class="fas fa-lightbulb"></i>
+      <h3>Feature Request</h3>
+      <p>Have an idea to improve the app? We're always listening.</p>
+    </div>
+    <div class="contact-card">
+      <i class="fas fa-shield-alt"></i>
+      <h3>Privacy Concerns</h3>
+      <p>Questions about your data? Read our <a href="privacy.html">Privacy Policy</a>.</p>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h2>Send us a Message</h2>
+    <div class="form-group">
+      <label>Your Name</label>
+      <input type="text" id="c-name" placeholder="Enter your name"/>
+    </div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="c-email" placeholder="you@example.com"/>
+    </div>
+    <div class="form-group">
+      <label>Subject</label>
+      <select id="c-subject">
+        <option>General Question</option>
+        <option>Bug Report</option>
+        <option>Feature Request</option>
+        <option>Privacy Concern</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Message</label>
+      <textarea id="c-message" placeholder="Write your message here..."></textarea>
+    </div>
+    <button class="btn-submit" onclick="submitForm()"><i class="fas fa-paper-plane"></i> Send Message</button>
+    <div class="success-msg" id="success-msg">✅ Thank you! Your message has been sent. We'll get back to you soon.</div>
+  </div>
+</div>
+<footer>
+  © 2026 Expence Tracker · 
+  <a href="about.html">About</a>
+  <a href="privacy.html">Privacy Policy</a>
+  <a href="contact.html">Contact</a>
+  <a href="terms.html">Terms</a>
+</footer>
+<script>
+function submitForm(){
+  const name=document.getElementById('c-name').value.trim();
+  const email=document.getElementById('c-email').value.trim();
+  const msg=document.getElementById('c-message').value.trim();
+  if(!name||!email||!msg){alert('Please fill all fields.');return;}
+  document.getElementById('success-msg').style.display='block';
+  document.getElementById('c-name').value='';
+  document.getElementById('c-email').value='';
+  document.getElementById('c-message').value='';
+}
+</script>
+</body>
+</html>
