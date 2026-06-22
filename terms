@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Terms & Conditions — Expence Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#F8F9FC;color:#1A2340;}
+.nav{background:#fff;border-bottom:1px solid #E8EBF4;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#C9A84C,#E8C96B,#A07830);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;}
+.nav-logo-name{font-size:16px;font-weight:900;letter-spacing:1.5px;color:#1A2340;}
+.nav-logo-name span{color:#C9A84C;}
+.nav-back{color:#C9A84C;text-decoration:none;font-size:14px;font-weight:600;}
+.container{max-width:720px;margin:0 auto;padding:48px 24px;}
+.page-title{font-size:32px;font-weight:900;color:#1A2340;margin-bottom:8px;}
+.updated{font-size:13px;color:#6B7A99;margin-bottom:40px;}
+h2{font-size:18px;font-weight:800;color:#1A2340;margin:28px 0 10px;}
+p,li{font-size:15px;color:#4A5568;line-height:1.8;margin-bottom:10px;}
+ul{padding-left:20px;}
+footer{text-align:center;padding:32px 24px;color:#6B7A99;font-size:13px;border-top:1px solid #E8EBF4;margin-top:40px;}
+footer a{color:#C9A84C;text-decoration:none;margin:0 8px;}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"><i class="fas fa-wallet"></i></div>
+    <span class="nav-logo-name">EX<span>PENCE</span></span>
+  </a>
+  <a href="index.html" class="nav-back"><i class="fas fa-arrow-left"></i> Back to App</a>
+</nav>
+<div class="container">
+  <div class="page-title">Terms & Conditions</div>
+  <div class="updated">Last updated: June 2026</div>
+
+  <p>Please read these Terms and Conditions carefully before using Expence Tracker. By accessing or using our service, you agree to be bound by these terms.</p>
+
+  <h2>1. Acceptance of Terms</h2>
+  <p>By creating an account or using Expence Tracker, you agree to these Terms and Conditions and our Privacy Policy. If you do not agree, please do not use the service.</p>
+
+  <h2>2. Description of Service</h2>
+  <p>Expence Tracker is a free personal expense tracking web application that allows users to record, categorize, and review their personal expenses. The service is provided "as is" for personal, non-commercial use.</p>
+
+  <h2>3. User Accounts</h2>
+  <ul>
+    <li>You must provide accurate information when creating an account.</li>
+    <li>You are responsible for maintaining the security of your account and password.</li>
+    <li>You must notify us immediately of any unauthorized use of your account.</li>
+    <li>One person may not maintain more than one account.</li>
+  </ul>
+
+  <h2>4. User Data</h2>
+  <p>You retain ownership of all expense data you enter into Expence Tracker. By using the service, you grant us a limited license to store and process your data solely for the purpose of providing the service to you.</p>
+
+  <h2>5. Acceptable Use</h2>
+  <p>You agree not to:</p>
+  <ul>
+    <li>Use the service for any unlawful purpose.</li>
+    <li>Attempt to gain unauthorized access to any part of the service.</li>
+    <li>Interfere with or disrupt the service or servers.</li>
+    <li>Upload malicious code or content.</li>
+  </ul>
+
+  <h2>6. Disclaimer of Warranties</h2>
+  <p>Expence Tracker is provided "as is" without warranties of any kind. We do not guarantee that the service will be uninterrupted, error-free, or completely secure. The app is for personal tracking purposes only and should not be relied upon for financial, tax, or legal advice.</p>
+
+  <h2>7. Limitation of Liability</h2>
+  <p>To the fullest extent permitted by law, Expence Tracker shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the service, including loss of data.</p>
+
+  <h2>8. Modifications to Service</h2>
+  <p>We reserve the right to modify or discontinue the service at any time with or without notice. We shall not be liable to you or any third party for any modification, suspension, or discontinuation of the service.</p>
+
+  <h2>9. Changes to Terms</h2>
+  <p>We may update these Terms from time to time. Continued use of the service after changes constitutes acceptance of the new terms. We will indicate the date of the latest revision at the top of this page.</p>
+
+  <h2>10. Contact</h2>
+  <p>Questions about these Terms? Visit our <a href="contact.html" style="color:#C9A84C">Contact page</a>.</p>
+</div>
+<footer>
+  © 2026 Expence Tracker · 
+  <a href="about.html">About</a>
+  <a href="privacy.html">Privacy Policy</a>
+  <a href="contact.html">Contact</a>
+  <a href="terms.html">Terms</a>
+</footer>
+</body>
+</html>
