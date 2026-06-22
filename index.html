@@ -585,10 +585,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <button class="btn-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
 
     <div style="text-align:center;padding:20px 0 4px;font-size:12px;color:var(--text-muted);">
-      <a href="about.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">About</a>
-      <a href="privacy.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Privacy</a>
-      <a href="contact.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Contact</a>
-      <a href="terms.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Terms</a>
+      <a href="/Expense_Tracker/about.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">About</a>
+      <a href="/Expense_Tracker/privacy.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Privacy</a>
+      <a href="/Expense_Tracker/contact.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Contact</a>
+      <a href="/Expense_Tracker/terms.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Terms</a>
       <div style="margin-top:8px;">© 2026 Expence Tracker</div>
     </div>
   </div>
@@ -634,7 +634,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <!-- Firebase -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithPopup}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,query,orderBy,writeBatch,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig={apiKey:"AIzaSyD6eUkcF1DR5Tj_oMNmJGHDm06XzKLGBg4",authDomain:"expense-tracker-5c250.firebaseapp.com",projectId:"expense-tracker-5c250",storageBucket:"expense-tracker-5c250.firebasestorage.app",messagingSenderId:"770528221263",appId:"1:770528221263:web:d85908f947ff233a07f23a",measurementId:"G-NGR7KC6ESL"};
@@ -726,22 +726,39 @@ window.doLogout=async()=>{
 };
 
 window.doGoogleSignIn=async()=>{
+  const provider=new GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
   try{
-    const provider=new GoogleAuthProvider();
-    provider.setCustomParameters({prompt:'select_account'});
+    // Try popup first (works on desktop)
     await signInWithPopup(auth,provider);
   }catch(e){
-    if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
+    if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+      // Fallback to redirect (works on mobile/Safari)
+      try{await signInWithRedirect(auth,provider);}catch(err){showAuthErr(friendlyError(err));}
+    } else if(e.code!=='auth/cancelled-popup-request'){
       showAuthErr(friendlyError(e));
     }
   }
 };
+
+// Handle redirect result on page load
+getRedirectResult(auth).then((result)=>{
+  if(result&&result.user){
+    // User signed in via redirect — handled by onAuthStateChanged
+  }
+}).catch((e)=>{
+  if(e.code&&!e.code.includes('no-current-user')){
+    console.log('Redirect error:',e.code);
+  }
+});
 
 function friendlyError(e){
   const m=e.code||'';
   if(m.includes('user-not-found')||m.includes('wrong-password')||m.includes('invalid-credential'))return'Incorrect email or password.';
   if(m.includes('email-already-in-use'))return'This email is already registered.';
   if(m.includes('invalid-email'))return'Please enter a valid email.';
+  if(m.includes('unauthorized-domain'))return'Google sign-in not enabled yet. Please enable it in Firebase Console.';
+  if(m.includes('network-request-failed'))return'No internet connection. Please try again.';
   return'Something went wrong. Please try again.';
 }
 
