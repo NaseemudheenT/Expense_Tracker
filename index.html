@@ -14,6 +14,8 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="application-name" content="Expence Tracker"/>
 <meta name="description" content="Track your expenses anytime, anywhere. Multi-currency support for world travelers."/>
+<!-- Google AdSense -->
+<!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
 
 <!-- Icons -->
 <link rel="apple-touch-icon" href="icon-192.png"/>
@@ -61,20 +63,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .pw-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-muted);font-size:16px;}
 .btn-auth{width:100%;padding:14px;background:var(--gold-gradient);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;box-shadow:0 4px 16px rgba(201,168,76,0.35);transition:opacity 0.2s;letter-spacing:0.5px;}
 .btn-auth:hover{opacity:0.9;}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-divider span{font-size:12px;color:var(--text-muted);font-weight:600;white-space:nowrap;}
+.btn-google{width:100%;padding:13px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;margin-bottom:4px;}
+.btn-google:hover{border-color:#4285F4;background:#f8f9ff;box-shadow:0 2px 12px rgba(66,133,244,0.15);}
+.btn-google img{width:20px;height:20px;}
 .auth-err{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;display:none;}
 
 /* ===== APP ===== */
 #app-screen{display:none;max-width:560px;margin:0 auto;min-height:100vh;padding-bottom:80px;}
 
 /* HEADER */
-.app-header{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 12px;position:sticky;top:0;z-index:100;background:var(--bg);}
-.header-logo{display:flex;align-items:center;gap:10px;}
-.header-logo-icon{width:38px;height:38px;background:var(--gold-gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;}
-.header-logo-text h2{font-size:14px;font-weight:800;letter-spacing:1.5px;color:var(--navy);}
-[data-theme="dark"] .header-logo-text h2{color:var(--text);}
-.header-logo-text p{font-size:9px;letter-spacing:2.5px;color:var(--gold);font-weight:600;}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;position:sticky;top:0;z-index:100;background:var(--bg);}
+.header-logo{display:flex;align-items:center;gap:12px;}
+.header-logo-icon{width:42px;height:42px;background:var(--gold-gradient);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;box-shadow:0 3px 10px rgba(201,168,76,0.4);}
+.header-brand{display:flex;flex-direction:column;}
+.header-brand-name{font-size:18px;font-weight:900;letter-spacing:2px;color:var(--navy);line-height:1;}
+[data-theme="dark"] .header-brand-name{color:#F0F4FF;}
+.header-brand-name span{color:var(--gold);}
+.header-brand-sub{font-size:8.5px;letter-spacing:3px;color:var(--gold);font-weight:700;margin-top:2px;text-transform:uppercase;}
 .header-actions{display:flex;gap:8px;}
-.icon-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.2s;}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all 0.2s;}
 .icon-btn:hover{border-color:var(--gold);color:var(--gold);}
 
 /* SUMMARY CARD */
@@ -149,12 +159,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .empty-state p{font-size:14px;}
 
 /* BOTTOM NAV */
-.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;background:var(--card);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:10px 10px 14px;z-index:200;}
-.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--text-muted);font-size:10px;font-weight:600;padding:6px 16px;border-radius:12px;transition:all 0.2s;background:none;border:none;font-family:'Inter',sans-serif;}
-.nav-item i{font-size:18px;}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;background:var(--card);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:8px 8px 20px;z-index:200;safe-area-inset-bottom:env(safe-area-inset-bottom);}
+.nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--text-muted);font-size:10px;font-weight:600;padding:4px 12px;border-radius:12px;transition:all 0.2s;background:none;border:none;font-family:'Inter',sans-serif;min-width:56px;}
+.nav-item i{font-size:20px;line-height:1;}
 .nav-item.active{color:var(--gold);}
-.nav-add-btn{width:52px;height:52px;border-radius:50%;background:var(--gold-gradient);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(201,168,76,0.5);color:#fff;font-size:22px;transition:transform 0.2s;margin-top:-16px;}
+.nav-add-btn{width:56px;height:56px;border-radius:50%;background:var(--gold-gradient);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(201,168,76,0.5);color:#fff;font-size:24px;line-height:1;transition:transform 0.2s;flex-shrink:0;margin-bottom:8px;}
 .nav-add-btn:hover{transform:scale(1.08);}
+.nav-add-btn i{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
 
 /* CALCULATOR PANEL */
 .calc-panel{display:none;padding:16px;}
@@ -264,15 +275,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="auth-logo-icon"><i class="fas fa-wallet"></i></div>
-      <h1>EXPENCE</h1>
-      <p>— TRACKER —</p>
+      <img src="logo.png" alt="Expence Tracker" style="width:140px;height:auto;margin-bottom:8px;"/>
     </div>
     <div class="auth-tabs">
       <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
       <div class="auth-tab" onclick="switchTab('signup')">Sign Up</div>
     </div>
     <div id="login-form">
+      <button class="btn-google" onclick="doGoogleSignIn()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
+        Continue with Google
+      </button>
+      <div class="auth-divider"><span>or sign in with email</span></div>
       <div class="form-group">
         <label>Email</label>
         <input type="email" id="login-email" placeholder="you@example.com"/>
@@ -287,6 +301,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <button class="btn-auth" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Sign In</button>
     </div>
     <div id="signup-form" style="display:none">
+      <button class="btn-google" onclick="doGoogleSignIn()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
+        Continue with Google
+      </button>
+      <div class="auth-divider"><span>or sign up with email</span></div>
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" id="signup-name" placeholder="Your name"/>
@@ -313,11 +332,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   <!-- Header -->
   <div class="app-header">
     <div class="header-logo">
-      <div class="header-logo-icon"><i class="fas fa-wallet"></i></div>
-      <div class="header-logo-text">
-        <h2>EXPENCE</h2>
-        <p>— TRACKER —</p>
-      </div>
+      <img src="logo.png" alt="Expence Tracker" style="height:42px;width:auto;"/>
     </div>
     <div class="header-actions">
       <button class="icon-btn" onclick="toggleTheme()" title="Toggle Theme"><i class="fas fa-moon" id="theme-icon"></i></button>
@@ -568,6 +583,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     </div>
 
     <button class="btn-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+
+    <div style="text-align:center;padding:20px 0 4px;font-size:12px;color:var(--text-muted);">
+      <a href="about.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">About</a>
+      <a href="privacy.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Privacy</a>
+      <a href="contact.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Contact</a>
+      <a href="terms.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Terms</a>
+      <div style="margin-top:8px;">© 2026 Expence Tracker</div>
+    </div>
   </div>
 
   <!-- Bottom Nav -->
@@ -611,7 +634,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <!-- Firebase -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithPopup}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,query,orderBy,writeBatch,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig={apiKey:"AIzaSyD6eUkcF1DR5Tj_oMNmJGHDm06XzKLGBg4",authDomain:"expense-tracker-5c250.firebaseapp.com",projectId:"expense-tracker-5c250",storageBucket:"expense-tracker-5c250.firebasestorage.app",messagingSenderId:"770528221263",appId:"1:770528221263:web:d85908f947ff233a07f23a",measurementId:"G-NGR7KC6ESL"};
@@ -702,6 +725,18 @@ window.doLogout=async()=>{
   await signOut(auth);
 };
 
+window.doGoogleSignIn=async()=>{
+  try{
+    const provider=new GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    await signInWithPopup(auth,provider);
+  }catch(e){
+    if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){
+      showAuthErr(friendlyError(e));
+    }
+  }
+};
+
 function friendlyError(e){
   const m=e.code||'';
   if(m.includes('user-not-found')||m.includes('wrong-password')||m.includes('invalid-credential'))return'Incorrect email or password.';
@@ -727,45 +762,45 @@ function showApp(user){
 function showAuth(){
   document.getElementById('auth-screen').style.display='flex';
   document.getElementById('app-screen').style.display='none';
+  // Clear current user cache on logout
+  if(currentUser){try{localStorage.removeItem(getCacheKey(currentUser.uid));}catch(e){}}
   expenses=[];
-  try{localStorage.removeItem(CACHE_KEY);}catch(e){}
+  currentUser=null;
 }
 
-// ===== FIREBASE EXPENSES =====
-const CACHE_KEY='exptrack_expenses_cache';
+const CACHE_KEY_PREFIX='exptrack_cache_';
 
-function saveToCache(data){
-  try{localStorage.setItem(CACHE_KEY,JSON.stringify(data));}catch(e){}
+function getCacheKey(uid){return CACHE_KEY_PREFIX+uid;}
+function saveToCache(uid,data){
+  try{localStorage.setItem(getCacheKey(uid),JSON.stringify(data));}catch(e){}
 }
-function loadFromCache(){
-  try{const d=localStorage.getItem(CACHE_KEY);return d?JSON.parse(d):[];}catch(e){return[];}
+function loadFromCache(uid){
+  try{const d=localStorage.getItem(getCacheKey(uid));return d?JSON.parse(d):[];}catch(e){return[];}
 }
 
 function subscribeExpenses(uid){
   if(unsubscribe)unsubscribe();
 
-  // 1. Show cached data INSTANTLY so page never looks empty on refresh
-  const cached=loadFromCache();
+  // Load THIS user's cache instantly
+  const cached=loadFromCache(uid);
   if(cached.length>0){
     expenses=cached;
     renderAll();
   } else {
-    // Show loading spinner while first load
     document.getElementById('history-list').innerHTML=
       '<div class="loading-state"><div class="spinner"></div><p>Loading your expenses...</p></div>';
   }
 
-  // 2. Subscribe to Firebase — updates in background
+  // Subscribe Firebase for live updates
   const q=query(collection(db,'users',uid,'expenses'),orderBy('timestamp','desc'));
   unsubscribe=onSnapshot(q,(snap)=>{
     expenses=snap.docs.map(d=>({id:d.id,...d.data()}));
-    saveToCache(expenses); // save fresh data to cache
+    saveToCache(uid,expenses);
     renderAll();
   },(err)=>{
-    // If offline, cached data is already showing — just show a subtle note
     if(expenses.length===0){
       document.getElementById('history-list').innerHTML=
-        '<div class="empty-state"><i class="fas fa-wifi-slash"></i><p>You\'re offline. Connect to load expenses.</p></div>';
+        '<div class="empty-state"><i class="fas fa-wifi-slash"></i><p>You\'re offline. Cached data shown when available.</p></div>';
     }
   });
 }
