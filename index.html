@@ -267,7 +267,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <body>
 
 <!-- AUTH SCREEN -->
-<div id="auth-screen">
+<div id="auth-screen" style="display:none">
   <div class="auth-card">
     <div class="auth-logo">
       <img src="/Expense_Tracker/logo.png" alt="Expence Tracker" style="width:140px;height:auto;margin-bottom:8px;"/>
@@ -629,15 +629,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <!-- Firebase -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,query,orderBy,writeBatch,getDocs,enableIndexedDbPersistence}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithRedirect,getRedirectResult}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,query,orderBy,writeBatch,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig={apiKey:"AIzaSyD6eUkcF1DR5Tj_oMNmJGHDm06XzKLGBg4",authDomain:"expense-tracker-5c250.firebaseapp.com",projectId:"expense-tracker-5c250",storageBucket:"expense-tracker-5c250.firebasestorage.app",messagingSenderId:"770528221263",appId:"1:770528221263:web:d85908f947ff233a07f23a",measurementId:"G-NGR7KC6ESL"};
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
-// Enable offline persistence — data works even without internet
-enableIndexedDbPersistence(db).catch(()=>{});
 let unsubscribe=null;
 let currentUser=null;
 let expenses=[];
@@ -684,6 +682,10 @@ const CURRENCIES={
 
 let currentCurrency='INR';
 
+// Show auth screen immediately on load — no blank/loading page
+document.getElementById('auth-screen').style.display='flex';
+document.getElementById('app-screen').style.display='none';
+
 // ===== AUTH STATE =====
 onAuthStateChanged(auth,(user)=>{
   if(user){
@@ -723,29 +725,21 @@ window.doLogout=async()=>{
 };
 
 window.doGoogleSignIn=async()=>{
-  const provider=new GoogleAuthProvider();
-  provider.setCustomParameters({prompt:'select_account'});
   try{
-    // Try popup first (works on desktop)
-    await signInWithPopup(auth,provider);
+    const provider=new GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    await signInWithRedirect(auth,provider);
   }catch(e){
-    if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
-      // Fallback to redirect (works on mobile/Safari)
-      try{await signInWithRedirect(auth,provider);}catch(err){showAuthErr(friendlyError(err));}
-    } else if(e.code!=='auth/cancelled-popup-request'){
-      showAuthErr(friendlyError(e));
-    }
+    showAuthErr(friendlyError(e));
   }
 };
 
-// Handle redirect result on page load
+// Handle redirect result when page loads back after Google login
 getRedirectResult(auth).then((result)=>{
-  if(result&&result.user){
-    // User signed in via redirect — handled by onAuthStateChanged
-  }
+  // Handled automatically by onAuthStateChanged
 }).catch((e)=>{
-  if(e.code&&!e.code.includes('no-current-user')){
-    console.log('Redirect error:',e.code);
+  if(e&&e.code&&!e.code.includes('no-current-user')&&!e.code.includes('null-user')){
+    showAuthErr(friendlyError(e));
   }
 });
 
