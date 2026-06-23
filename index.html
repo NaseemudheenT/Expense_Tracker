@@ -6,7 +6,7 @@
 <title>Expence Tracker</title>
 
 <!-- PWA -->
-<link rel="manifest" href="/Expense_Tracker/manifest.json"/>
+<link rel="manifest" href="./manifest.json"/>
 <meta name="theme-color" content="#C9A84C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -14,16 +14,11 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="application-name" content="Expence Tracker"/>
 <meta name="description" content="Track your expenses anytime, anywhere. Multi-currency support for world travelers."/>
-<!-- Google AdSense -->
-<!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
 
 <!-- Icons -->
-<link rel="apple-touch-icon" href="icon-192.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"/>
-
-<!-- Splash screen colors for iOS -->
-<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<link rel="apple-touch-icon" href="./icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png"/>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
@@ -275,7 +270,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">
-      <img src="logo.png" alt="Expence Tracker" style="width:140px;height:auto;margin-bottom:8px;"/>
+      <img src="/Expense_Tracker/logo.png" alt="Expence Tracker" style="width:140px;height:auto;margin-bottom:8px;"/>
     </div>
     <div class="auth-tabs">
       <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
@@ -332,7 +327,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   <!-- Header -->
   <div class="app-header">
     <div class="header-logo">
-      <img src="logo.png" alt="Expence Tracker" style="height:42px;width:auto;"/>
+      <img src="/Expense_Tracker/logo.png" alt="Expence Tracker" style="height:42px;width:auto;"/>
     </div>
     <div class="header-actions">
       <button class="icon-btn" onclick="toggleTheme()" title="Toggle Theme"><i class="fas fa-moon" id="theme-icon"></i></button>
@@ -585,10 +580,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <button class="btn-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
 
     <div style="text-align:center;padding:20px 0 4px;font-size:12px;color:var(--text-muted);">
-      <a href="/Expense_Tracker/about.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">About</a>
-      <a href="/Expense_Tracker/privacy.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Privacy</a>
-      <a href="/Expense_Tracker/contact.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Contact</a>
-      <a href="/Expense_Tracker/terms.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Terms</a>
+      <a href="about.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">About</a>
+      <a href="privacy.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Privacy</a>
+      <a href="contact.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Contact</a>
+      <a href="terms.html" style="color:var(--gold);text-decoration:none;margin:0 8px;">Terms</a>
       <div style="margin-top:8px;">© 2026 Expence Tracker</div>
     </div>
   </div>
@@ -1229,58 +1224,56 @@ setInterval(updateDate,60000);
 // ===== PWA INSTALL =====
 let deferredPrompt=null;
 
+// Store prompt as soon as browser fires it — even before login
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  // Show banner if app is visible
+  if(document.getElementById('app-screen').style.display!=='none'){
+    if(!localStorage.getItem('exptrack_install_dismissed')){
+      setTimeout(()=>{ document.getElementById('install-banner').style.display='flex'; },2000);
+    }
+  }
+  detectInstallState();
+});
+
 function detectInstallState(){
   const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
   const isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
+  const installCard=document.getElementById('install-card');
+  const iosCard=document.getElementById('ios-install-card');
+  const installedCard=document.getElementById('installed-card');
+  if(!installCard)return;
+
   if(isInstalled){
-    document.getElementById('installed-card').style.display='block';
-    document.getElementById('install-card').style.display='none';
-    document.getElementById('ios-install-card').style.display='none';
+    installedCard.style.display='block';
+    installCard.style.display='none';
+    iosCard.style.display='none';
     document.getElementById('install-banner').style.display='none';
   } else if(isIOS&&isSafari){
-    document.getElementById('ios-install-card').style.display='block';
-    document.getElementById('install-card').style.display='none';
-  } else if(deferredPrompt){
-    document.getElementById('install-card').style.display='block';
+    iosCard.style.display='block';
+    installCard.style.display='none';
   } else {
-    // Chrome on Mac/Desktop — show install card anyway, clicking will guide user
-    document.getElementById('install-card').style.display='block';
+    // Show install card always — works for Chrome desktop and Android
+    installCard.style.display='block';
   }
 }
-
-window.addEventListener('beforeinstallprompt',(e)=>{
-  e.preventDefault();
-  deferredPrompt=e;
-  detectInstallState();
-  if(!localStorage.getItem('exptrack_install_dismissed')){
-    setTimeout(()=>{
-      if(document.getElementById('app-screen').style.display!=='none'){
-        document.getElementById('install-banner').style.display='flex';
-      }
-    },3000);
-  }
-});
 
 window.installApp=async()=>{
   if(deferredPrompt){
     deferredPrompt.prompt();
     const{outcome}=await deferredPrompt.userChoice;
     if(outcome==='accepted'){
-      showToast('App installed successfully! 🎉','success');
+      showToast('App installed! 🎉','success');
       document.getElementById('install-card').style.display='none';
       document.getElementById('installed-card').style.display='block';
     }
     deferredPrompt=null;
   } else {
-    // Guide user manually
-    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-    if(isIOS){
-      showToast('Open in Safari → Share → Add to Home Screen','success');
-    } else {
-      showToast('Click the install icon in your browser address bar ↑','success');
-    }
+    // No prompt available — guide user
+    showToast('In Chrome: click the ⊕ icon in the address bar to install','success');
   }
   document.getElementById('install-banner').style.display='none';
 };
@@ -1304,16 +1297,16 @@ window.switchNav=(tab,btn)=>{
   if(tab==='settings')detectInstallState();
 };
 
-// Register Service Worker
+// Register Service Worker with relative path
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/Expense_Tracker/sw.js', {scope: '/Expense_Tracker/'}).then(()=>{
-    console.log('Service Worker registered');
+  navigator.serviceWorker.register('./sw.js').then(reg=>{
+    console.log('SW registered');
     detectInstallState();
-  }).catch((e)=>{console.log('SW error',e);});
+  }).catch(e=>console.log('SW error:',e));
 }
 
-// Initial detection
-setTimeout(detectInstallState, 500);
+// Run detection after short delay
+setTimeout(detectInstallState, 800);
 </script>
 </body>
 </html>
