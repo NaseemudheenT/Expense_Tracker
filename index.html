@@ -632,80 +632,100 @@ import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-ap
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithRedirect,getRedirectResult}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,query,orderBy,writeBatch,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig={apiKey:"AIzaSyD6eUkcF1DR5Tj_oMNmJGHDm06XzKLGBg4",authDomain:"expense-tracker-5c250.firebaseapp.com",projectId:"expense-tracker-5c250",storageBucket:"expense-tracker-5c250.firebasestorage.app",messagingSenderId:"770528221263",appId:"1:770528221263:web:d85908f947ff233a07f23a",measurementId:"G-NGR7KC6ESL"};
-const app=initializeApp(firebaseConfig);
+// ===== FIREBASE INIT =====
+const app=initializeApp({apiKey:"AIzaSyD6eUkcF1DR5Tj_oMNmJGHDm06XzKLGBg4",authDomain:"expense-tracker-5c250.firebaseapp.com",projectId:"expense-tracker-5c250",storageBucket:"expense-tracker-5c250.firebasestorage.app",messagingSenderId:"770528221263",appId:"1:770528221263:web:d85908f947ff233a07f23a"});
 const auth=getAuth(app);
 const db=getFirestore(app);
+
 let unsubscribe=null;
 let currentUser=null;
 let expenses=[];
+let currentCurrency=localStorage.getItem('exptrack_currency')||'INR';
+let deferredPrompt=null;
+let currentNav='home';
+let isDark=localStorage.getItem('exptrack_dark')==='true';
 
 // ===== CURRENCIES =====
 const CURRENCIES={
-  INR:{symbol:'₹',name:'Indian Rupee',code:'INR'},
-  USD:{symbol:'$',name:'US Dollar',code:'USD'},
-  EUR:{symbol:'€',name:'Euro',code:'EUR'},
-  GBP:{symbol:'£',name:'British Pound',code:'GBP'},
-  JPY:{symbol:'¥',name:'Japanese Yen',code:'JPY'},
-  AED:{symbol:'د.إ',name:'UAE Dirham',code:'AED'},
-  SGD:{symbol:'S$',name:'Singapore Dollar',code:'SGD'},
-  AUD:{symbol:'A$',name:'Australian Dollar',code:'AUD'},
-  CAD:{symbol:'C$',name:'Canadian Dollar',code:'CAD'},
-  CHF:{symbol:'Fr',name:'Swiss Franc',code:'CHF'},
-  CNY:{symbol:'¥',name:'Chinese Yuan',code:'CNY'},
-  HKD:{symbol:'HK$',name:'Hong Kong Dollar',code:'HKD'},
-  MYR:{symbol:'RM',name:'Malaysian Ringgit',code:'MYR'},
-  THB:{symbol:'฿',name:'Thai Baht',code:'THB'},
-  SAR:{symbol:'﷼',name:'Saudi Riyal',code:'SAR'},
-  QAR:{symbol:'﷼',name:'Qatari Riyal',code:'QAR'},
-  KWD:{symbol:'د.ك',name:'Kuwaiti Dinar',code:'KWD'},
-  BHD:{symbol:'BD',name:'Bahraini Dinar',code:'BHD'},
-  OMR:{symbol:'﷼',name:'Omani Rial',code:'OMR'},
-  NZD:{symbol:'NZ$',name:'New Zealand Dollar',code:'NZD'},
-  ZAR:{symbol:'R',name:'South African Rand',code:'ZAR'},
-  BRL:{symbol:'R$',name:'Brazilian Real',code:'BRL'},
-  MXN:{symbol:'$',name:'Mexican Peso',code:'MXN'},
-  IDR:{symbol:'Rp',name:'Indonesian Rupiah',code:'IDR'},
-  PHP:{symbol:'₱',name:'Philippine Peso',code:'PHP'},
-  PKR:{symbol:'₨',name:'Pakistani Rupee',code:'PKR'},
-  BDT:{symbol:'৳',name:'Bangladeshi Taka',code:'BDT'},
-  LKR:{symbol:'Rs',name:'Sri Lankan Rupee',code:'LKR'},
-  NPR:{symbol:'Rs',name:'Nepalese Rupee',code:'NPR'},
-  KRW:{symbol:'₩',name:'South Korean Won',code:'KRW'},
-  TRY:{symbol:'₺',name:'Turkish Lira',code:'TRY'},
-  RUB:{symbol:'₽',name:'Russian Ruble',code:'RUB'},
-  SEK:{symbol:'kr',name:'Swedish Krona',code:'SEK'},
-  NOK:{symbol:'kr',name:'Norwegian Krone',code:'NOK'},
-  DKK:{symbol:'kr',name:'Danish Krone',code:'DKK'},
-  PLN:{symbol:'zł',name:'Polish Zloty',code:'PLN'}
+  INR:{symbol:'₹',name:'Indian Rupee'},USD:{symbol:'$',name:'US Dollar'},
+  EUR:{symbol:'€',name:'Euro'},GBP:{symbol:'£',name:'British Pound'},
+  JPY:{symbol:'¥',name:'Japanese Yen'},AED:{symbol:'د.إ',name:'UAE Dirham'},
+  SGD:{symbol:'S$',name:'Singapore Dollar'},AUD:{symbol:'A$',name:'Australian Dollar'},
+  CAD:{symbol:'C$',name:'Canadian Dollar'},CHF:{symbol:'Fr',name:'Swiss Franc'},
+  CNY:{symbol:'¥',name:'Chinese Yuan'},HKD:{symbol:'HK$',name:'Hong Kong Dollar'},
+  MYR:{symbol:'RM',name:'Malaysian Ringgit'},THB:{symbol:'฿',name:'Thai Baht'},
+  SAR:{symbol:'﷼',name:'Saudi Riyal'},QAR:{symbol:'﷼',name:'Qatari Riyal'},
+  KWD:{symbol:'د.ك',name:'Kuwaiti Dinar'},BHD:{symbol:'BD',name:'Bahraini Dinar'},
+  OMR:{symbol:'﷼',name:'Omani Rial'},NZD:{symbol:'NZ$',name:'New Zealand Dollar'},
+  ZAR:{symbol:'R',name:'South African Rand'},BRL:{symbol:'R$',name:'Brazilian Real'},
+  MXN:{symbol:'$',name:'Mexican Peso'},IDR:{symbol:'Rp',name:'Indonesian Rupiah'},
+  PHP:{symbol:'₱',name:'Philippine Peso'},PKR:{symbol:'₨',name:'Pakistani Rupee'},
+  BDT:{symbol:'৳',name:'Bangladeshi Taka'},LKR:{symbol:'Rs',name:'Sri Lankan Rupee'},
+  NPR:{symbol:'Rs',name:'Nepalese Rupee'},KRW:{symbol:'₩',name:'South Korean Won'},
+  TRY:{symbol:'₺',name:'Turkish Lira'},RUB:{symbol:'₽',name:'Russian Ruble'},
+  SEK:{symbol:'kr',name:'Swedish Krona'},NOK:{symbol:'kr',name:'Norwegian Krone'},
+  DKK:{symbol:'kr',name:'Danish Krone'},PLN:{symbol:'zł',name:'Polish Zloty'}
 };
 
-let currentCurrency='INR';
+// ===== CACHE =====
+const CACHE_PREFIX='exptrack_v2_';
+function saveCache(uid,data){try{localStorage.setItem(CACHE_PREFIX+uid,JSON.stringify(data));}catch(e){}}
+function loadCache(uid){try{const d=localStorage.getItem(CACHE_PREFIX+uid);return d?JSON.parse(d):[];}catch(e){return[];}}
+function clearCache(uid){try{localStorage.removeItem(CACHE_PREFIX+uid);}catch(e){}}
 
-// Show auth screen immediately on load — no blank/loading page
-document.getElementById('auth-screen').style.display='flex';
-document.getElementById('app-screen').style.display='none';
+// ===== THEME =====
+if(isDark)document.documentElement.setAttribute('data-theme','dark');
 
-// ===== AUTH STATE =====
+// ===== AUTH =====
 onAuthStateChanged(auth,(user)=>{
   if(user){
     currentUser=user;
     showApp(user);
     subscribeExpenses(user.uid);
   }else{
+    if(unsubscribe){unsubscribe();unsubscribe=null;}
     currentUser=null;
+    expenses=[];
     showAuth();
-    if(unsubscribe)unsubscribe();
   }
 });
 
+// Handle Google redirect result
+getRedirectResult(auth).catch(()=>{});
+
+function showApp(user){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  document.getElementById('profile-name').textContent=user.displayName||user.email.split('@')[0];
+  document.getElementById('profile-email').textContent=user.email||'';
+  updateDate();
+  applyThemeToggle();
+  initCurrency();
+}
+
+function showAuth(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app-screen').style.display='none';
+}
+
+function applyThemeToggle(){
+  document.getElementById('theme-icon').className=isDark?'fas fa-sun':'fas fa-moon';
+  const dt=document.getElementById('dark-toggle');
+  if(dt)dt.className='toggle-switch'+(isDark?' on':'');
+}
+
+function initCurrency(){
+  const picker=document.getElementById('currency-picker');
+  if(picker){picker.value=currentCurrency;applyCurrency(currentCurrency);}
+}
+
+// ===== AUTH FUNCTIONS =====
 window.doLogin=async()=>{
   const email=document.getElementById('login-email').value.trim();
   const pw=document.getElementById('login-pw').value;
   if(!email||!pw){showAuthErr('Please fill all fields.');return;}
-  try{
-    await signInWithEmailAndPassword(auth,email,pw);
-  }catch(e){showAuthErr(friendlyError(e));}
+  try{await signInWithEmailAndPassword(auth,email,pw);}
+  catch(e){showAuthErr(authErr(e));}
 };
 
 window.doSignup=async()=>{
@@ -717,11 +737,7 @@ window.doSignup=async()=>{
   try{
     const cred=await createUserWithEmailAndPassword(auth,email,pw);
     await updateProfile(cred.user,{displayName:name});
-  }catch(e){showAuthErr(friendlyError(e));}
-};
-
-window.doLogout=async()=>{
-  await signOut(auth);
+  }catch(e){showAuthErr(authErr(e));}
 };
 
 window.doGoogleSignIn=async()=>{
@@ -729,112 +745,70 @@ window.doGoogleSignIn=async()=>{
     const provider=new GoogleAuthProvider();
     provider.setCustomParameters({prompt:'select_account'});
     await signInWithRedirect(auth,provider);
-  }catch(e){
-    showAuthErr(friendlyError(e));
-  }
+  }catch(e){showAuthErr(authErr(e));}
 };
 
-// Handle redirect result when page loads back after Google login
-getRedirectResult(auth).then((result)=>{
-  // Handled automatically by onAuthStateChanged
-}).catch((e)=>{
-  if(e&&e.code&&!e.code.includes('no-current-user')&&!e.code.includes('null-user')){
-    showAuthErr(friendlyError(e));
-  }
-});
+window.doLogout=async()=>{
+  if(currentUser)clearCache(currentUser.uid);
+  await signOut(auth);
+};
 
-function friendlyError(e){
-  const m=e.code||'';
-  if(m.includes('user-not-found')||m.includes('wrong-password')||m.includes('invalid-credential'))return'Incorrect email or password.';
-  if(m.includes('email-already-in-use'))return'This email is already registered.';
-  if(m.includes('invalid-email'))return'Please enter a valid email.';
-  if(m.includes('unauthorized-domain'))return'Google sign-in not enabled yet. Please enable it in Firebase Console.';
-  if(m.includes('network-request-failed'))return'No internet connection. Please try again.';
+function authErr(e){
+  const c=e.code||'';
+  if(c.includes('user-not-found')||c.includes('wrong-password')||c.includes('invalid-credential'))return'Wrong email or password.';
+  if(c.includes('email-already-in-use'))return'Email already registered. Please sign in.';
+  if(c.includes('invalid-email'))return'Please enter a valid email.';
+  if(c.includes('unauthorized-domain'))return'Domain not authorized. Add it in Firebase Console.';
+  if(c.includes('network'))return'No internet. Please try again.';
   return'Something went wrong. Please try again.';
 }
 
 function showAuthErr(msg){
   const el=document.getElementById('auth-err');
   el.textContent=msg;el.style.display='block';
-  setTimeout(()=>{el.style.display='none';},4000);
+  setTimeout(()=>el.style.display='none',4000);
 }
 
-function showApp(user){
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app-screen').style.display='block';
-  document.getElementById('profile-name').textContent=user.displayName||'User';
-  document.getElementById('profile-email').textContent=user.email||'';
-  updateDate();
-}
-
-function showAuth(){
-  document.getElementById('auth-screen').style.display='flex';
-  document.getElementById('app-screen').style.display='none';
-  // Clear current user cache on logout
-  if(currentUser){try{localStorage.removeItem(getCacheKey(currentUser.uid));}catch(e){}}
-  expenses=[];
-  currentUser=null;
-}
-
-const CACHE_KEY_PREFIX='exptrack_cache_';
-
-function getCacheKey(uid){return CACHE_KEY_PREFIX+uid;}
-function saveToCache(uid,data){
-  try{localStorage.setItem(getCacheKey(uid),JSON.stringify(data));}catch(e){}
-}
-function loadFromCache(uid){
-  try{const d=localStorage.getItem(getCacheKey(uid));return d?JSON.parse(d):[];}catch(e){return[];}
-}
-
+// ===== EXPENSES =====
 function subscribeExpenses(uid){
-  if(unsubscribe)unsubscribe();
-
-  // ALWAYS load cache instantly — no spinner ever
-  const cached=loadFromCache(uid);
-  expenses=cached;
-  renderAll(); // show instantly from cache (even if empty)
-
-  // Firebase updates silently in background
+  if(unsubscribe){unsubscribe();unsubscribe=null;}
+  // Show cached instantly — no spinner
+  expenses=loadCache(uid);
+  renderAll();
+  // Listen for live updates silently
   const q=query(collection(db,'users',uid,'expenses'),orderBy('timestamp','desc'));
   unsubscribe=onSnapshot(q,(snap)=>{
     expenses=snap.docs.map(d=>({id:d.id,...d.data()}));
-    saveToCache(uid,expenses);
-    renderAll(); // update UI silently when Firebase responds
-  },(err)=>{
-    // Offline - cached data already showing, do nothing
-    console.log('Offline mode - showing cached data');
-  });
+    saveCache(uid,expenses);
+    renderAll();
+  },()=>{/* offline - cached already showing */});
 }
 
 window.addExpense=async()=>{
   const name=document.getElementById('exp-name').value.trim();
-  const rawAmt=document.getElementById('exp-amount').value.replace(/,/g,'');
-  const amount=parseFloat(rawAmt);
-  if(!name){showToast('Enter an expense name.','error');return;}
-  if(!rawAmt||isNaN(amount)||amount<=0){showToast('Enter a valid amount.','error');return;}
+  const raw=document.getElementById('exp-amount').value.replace(/,/g,'');
+  const amount=parseFloat(raw);
+  if(!name){showToast('Enter expense name','error');return;}
+  if(!raw||isNaN(amount)||amount<=0){showToast('Enter valid amount','error');return;}
   const cat=document.querySelector('.cat-chip.active')?.dataset.cat||'Other';
   const now=new Date();
   try{
     await addDoc(collection(db,'users',currentUser.uid,'expenses'),{
       name,amount,currency:currentCurrency,category:cat,
       timestamp:now.getTime(),
-      dateStr:formatDateKey(now),
-      timeStr:formatTime(now)
+      dateStr:dateKey(now),
+      timeStr:timeStr(now)
     });
     document.getElementById('exp-name').value='';
     document.getElementById('exp-amount').value='';
     document.getElementById('amount-words').textContent='';
     showToast('Expense added!','success');
-  }catch(e){
-    showToast('Failed to save. Check connection.','error');
-  }
+  }catch(e){showToast('Failed to save. Check connection.','error');}
 };
 
 window.deleteExpense=async(id)=>{
-  try{
-    await deleteDoc(doc(db,'users',currentUser.uid,'expenses',id));
-    showToast('Expense deleted.','success');
-  }catch(e){showToast('Failed to delete.','error');}
+  try{await deleteDoc(doc(db,'users',currentUser.uid,'expenses',id));showToast('Deleted','success');}
+  catch(e){showToast('Failed to delete','error');}
 };
 
 window.clearAll=async()=>{
@@ -844,245 +818,159 @@ window.clearAll=async()=>{
     const batch=writeBatch(db);
     snap.docs.forEach(d=>batch.delete(d.ref));
     await batch.commit();
-    showToast('All expenses cleared.','success');
-  }catch(e){showToast('Failed to clear.','error');}
+    showToast('All cleared','success');
+  }catch(e){showToast('Failed to clear','error');}
 };
 
 // ===== RENDER =====
-function renderAll(){
-  renderHistory();
-  renderSummary();
-  renderCalendar();
-}
+function renderAll(){renderSummary();renderHistory();renderCalendar();}
 
 function renderSummary(){
-  const todayKey=formatDateKey(new Date());
-  const todayExpenses=expenses.filter(e=>e.dateStr===todayKey);
-  const total=todayExpenses.reduce((s,e)=>s+toDisplay(e.amount,e.currency),0);
+  const todayExp=expenses.filter(e=>e.dateStr===dateKey(new Date()));
   const sym=CURRENCIES[currentCurrency]?.symbol||currentCurrency;
-  document.getElementById('today-total').textContent=sym+formatNumber(total);
-  document.getElementById('today-count').textContent=todayExpenses.length+' expense'+(todayExpenses.length!==1?'s':'')+' today';
-}
-
-function toDisplay(amount,fromCurrency){
-  // Store and display in chosen currency; if different, show as-is (user manages manually)
-  // For same currency, direct; for different, show original (multi-currency tracking)
-  if(fromCurrency===currentCurrency)return amount;
-  return amount; // shown with original currency symbol in item
+  const total=todayExp.reduce((s,e)=>s+(e.currency===currentCurrency?e.amount:e.amount),0);
+  document.getElementById('today-total').textContent=sym+fmt(total);
+  document.getElementById('today-count').textContent=todayExp.length+' expense'+(todayExp.length!==1?'s':'')+' today';
 }
 
 function renderHistory(){
-  const container=document.getElementById('history-list');
+  const el=document.getElementById('history-list');
   if(!expenses.length){
-    container.innerHTML='<div class="empty-state"><i class="fas fa-receipt"></i><p>No expenses yet. Add your first one above!</p></div>';
+    el.innerHTML='<div class="empty-state"><i class="fas fa-receipt"></i><p>No expenses yet. Add your first one!</p></div>';
     return;
   }
   const groups={};
-  expenses.forEach(e=>{
-    if(!groups[e.dateStr])groups[e.dateStr]=[];
-    groups[e.dateStr].push(e);
-  });
-  const sortedDates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
-  container.innerHTML=sortedDates.map((dateStr,di)=>{
-    const items=groups[dateStr];
-    const dayTotal=items.reduce((s,e)=>s+e.amount,0);
-    const label=getDayLabel(dateStr);
-    const groupItems=items.map((e,i)=>{
-      const sym=CURRENCIES[e.currency]?.symbol||e.currency;
-      const differentCurrency=e.currency!==currentCurrency;
-      return`<div class="expense-item">
-        <div class="item-num">${i+1}</div>
-        <div class="item-info">
-          <div class="item-name">${escHtml(e.name)}</div>
-          <div class="item-meta">${e.timeStr} · ${e.dateStr}<span class="item-cat">${e.category}</span></div>
-        </div>
-        <div>
-          <div class="item-amount">${sym}${formatNumber(e.amount)}</div>
-          ${differentCurrency?`<div class="item-currency-note">${e.currency}</div>`:''}
-        </div>
-        <button class="btn-del" onclick="deleteExpense('${e.id}')"><i class="fas fa-trash"></i></button>
-      </div>`;
-    }).join('');
-    const sym0=CURRENCIES[items[0]?.currency]?.symbol||'';
+  expenses.forEach(e=>{if(!groups[e.dateStr])groups[e.dateStr]=[];groups[e.dateStr].push(e);});
+  const dates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML=dates.map((ds,di)=>{
+    const items=groups[ds];
+    const total=items.reduce((s,e)=>s+e.amount,0);
+    const sym=CURRENCIES[items[0]?.currency]?.symbol||'';
     return`<div class="day-group">
       <div class="day-header" onclick="toggleDay('dg${di}')">
-        <span class="day-label">${label}</span>
+        <span class="day-label">${dayLabel(ds)}</span>
         <div class="day-meta">
-          <span class="day-total">${sym0}${formatNumber(dayTotal)}</span>
+          <span class="day-total">${sym}${fmt(total)}</span>
           <span class="day-count">${items.length} Expense${items.length!==1?'s':''}</span>
           <i class="fas fa-chevron-down day-toggle" id="dt${di}"></i>
         </div>
       </div>
-      <div class="day-items" id="dg${di}">${groupItems}</div>
+      <div class="day-items" id="dg${di}">
+        ${items.map((e,i)=>{
+          const s=CURRENCIES[e.currency]?.symbol||e.currency;
+          return`<div class="expense-item">
+            <div class="item-num">${i+1}</div>
+            <div class="item-info">
+              <div class="item-name">${esc(e.name)}</div>
+              <div class="item-meta">${e.timeStr} · ${e.dateStr}<span class="item-cat">${e.category}</span></div>
+            </div>
+            <div>
+              <div class="item-amount">${s}${fmt(e.amount)}</div>
+              ${e.currency!==currentCurrency?`<div class="item-currency-note">${e.currency}</div>`:''}
+            </div>
+            <button class="btn-del" onclick="deleteExpense('${e.id}')"><i class="fas fa-trash"></i></button>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
   }).join('');
 }
 
-// ===== CALCULATOR =====
-let calcCurrent='0', calcExpr='', calcOperator='', calcPrev='', calcNewNum=true, calcHistory=[];
-
-function calcDisplay(){
-  const r=document.getElementById('calc-result');
-  const e=document.getElementById('calc-expr');
-  r.textContent=calcCurrent==='Error'?'Error':addCommasCalc(calcCurrent);
-  r.className='calc-result'+(calcCurrent==='Error'?' gold':'');
-  e.textContent=calcExpr;
-}
-
-function addCommasCalc(s){
-  if(!s||s==='0'||s==='-')return s;
-  const neg=s.startsWith('-');
-  const abs=neg?s.slice(1):s;
-  const parts=abs.split('.');
-  parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
-  return(neg?'-':'')+parts.join('.');
-}
-
-window.calcNum=(n)=>{
-  if(calcCurrent==='Error'){calcCurrent='0';calcNewNum=true;}
-  if(n==='.'&&calcCurrent.includes('.'))return;
-  if(calcNewNum){calcCurrent=(n==='.'?'0.':n);calcNewNum=false;}
-  else{calcCurrent=calcCurrent==='0'&&n!=='.'?n:calcCurrent+n;}
-  calcDisplay();
-};
-
-window.calcOp=(op)=>{
-  if(calcCurrent==='Error'){calcCurrent='0';}
-  if(calcOperator&&!calcNewNum){calcEquals(true);}
-  calcPrev=calcCurrent;
-  calcOperator=op;
-  calcExpr=addCommasCalc(calcCurrent)+' '+op;
-  calcNewNum=true;
-  calcDisplay();
-};
-
-window.calcEquals=(chain)=>{
-  if(!calcOperator||calcPrev==='')return;
-  const a=parseFloat(calcPrev), b=parseFloat(calcCurrent);
-  let res;
-  if(calcOperator==='÷'){res=b===0?'Error':a/b;}
-  else if(calcOperator==='×'){res=a*b;}
-  else if(calcOperator==='−'){res=a-b;}
-  else if(calcOperator==='+'){res=a+b;}
-  const exprStr=calcExpr+' '+addCommasCalc(calcCurrent)+' =';
-  const ansStr=res==='Error'?'Error':String(parseFloat(res.toFixed(10)));
-  if(!chain){
-    calcHistory.unshift({expr:exprStr,ans:ansStr});
-    if(calcHistory.length>20)calcHistory.pop();
-    renderCalcHistory();
-    calcExpr='';calcOperator='';calcPrev='';
-  }
-  calcCurrent=ansStr;
-  calcNewNum=true;
-  calcDisplay();
-};
-
-window.calcFn=(fn)=>{
-  if(fn==='AC'){calcCurrent='0';calcExpr='';calcOperator='';calcPrev='';calcNewNum=true;}
-  else if(fn==='+/-'){if(calcCurrent!=='0'&&calcCurrent!=='Error')calcCurrent=calcCurrent.startsWith('-')?calcCurrent.slice(1):'-'+calcCurrent;}
-  else if(fn==='%'){const v=parseFloat(calcCurrent);if(!isNaN(v))calcCurrent=String(v/100);}
-  calcDisplay();
-};
-
-function renderCalcHistory(){
-  const el=document.getElementById('calc-hist-list');
-  if(!calcHistory.length){el.innerHTML='<p style="color:var(--text-muted);font-size:13px">No calculations yet.</p>';return;}
-  el.innerHTML=calcHistory.map(h=>`<div class="calc-hist-item"><span class="calc-hist-expr">${h.expr}</span><span class="calc-hist-ans">${addCommasCalc(h.ans)}</span></div>`).join('');
-}
-
-window.clearCalcHistory=()=>{calcHistory=[];renderCalcHistory();};
-
-// keyboard support for calculator
-document.addEventListener('keydown',(e)=>{
-  if(document.getElementById('tab-stats').style.display==='block'){
-    if(e.key>='0'&&e.key<='9')calcNum(e.key);
-    else if(e.key==='.')calcNum('.');
-    else if(e.key==='+'||e.key==='-')calcOp(e.key==='-'?'−':'+');
-    else if(e.key==='*')calcOp('×');
-    else if(e.key==='/')calcOp('÷');
-    else if(e.key==='Enter'||e.key==='=')calcEquals();
-    else if(e.key==='Escape')calcFn('AC');
-    else if(e.key==='Backspace'){if(!calcNewNum&&calcCurrent.length>1)calcCurrent=calcCurrent.slice(0,-1);else{calcCurrent='0';calcNewNum=true;}calcDisplay();}
-  }
-});
-
 // ===== CALENDAR =====
-let calYear=new Date().getFullYear();
-let calMonth=new Date().getMonth();
-
+let calY=new Date().getFullYear(),calM=new Date().getMonth();
 function renderCalendar(){
-  const label=['January','February','March','April','May','June','July','August','September','October','November','December'][calMonth]+' '+calYear;
-  document.getElementById('cal-month-label').textContent=label;
-  const expenseDates=new Set(expenses.map(e=>e.dateStr));
-  const firstDay=new Date(calYear,calMonth,1).getDay();
-  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  const today=formatDateKey(new Date());
-  let html='<div class="cal-day-name">Su</div><div class="cal-day-name">Mo</div><div class="cal-day-name">Tu</div><div class="cal-day-name">We</div><div class="cal-day-name">Th</div><div class="cal-day-name">Fr</div><div class="cal-day-name">Sa</div>';
-  for(let i=0;i<firstDay;i++)html+='<div></div>';
-  for(let d=1;d<=daysInMonth;d++){
-    const key=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday=key===today;
-    const hasExp=expenseDates.has(key);
-    html+=`<div class="cal-day${isToday?' today':hasExp?' has-expense':''}" onclick="showCalDay('${key}')">${d}</div>`;
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent=months[calM]+' '+calY;
+  const expDates=new Set(expenses.map(e=>e.dateStr));
+  const fd=new Date(calY,calM,1).getDay();
+  const dim=new Date(calY,calM+1,0).getDate();
+  const today=dateKey(new Date());
+  let h='<div class="cal-day-name">Su</div><div class="cal-day-name">Mo</div><div class="cal-day-name">Tu</div><div class="cal-day-name">We</div><div class="cal-day-name">Th</div><div class="cal-day-name">Fr</div><div class="cal-day-name">Sa</div>';
+  for(let i=0;i<fd;i++)h+='<div></div>';
+  for(let d=1;d<=dim;d++){
+    const k=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    h+=`<div class="cal-day${k===today?' today':expDates.has(k)?' has-expense':''}" onclick="showCalDay('${k}')">${d}</div>`;
   }
-  document.getElementById('cal-grid').innerHTML=html;
+  document.getElementById('cal-grid').innerHTML=h;
 }
-
-window.calNav=(dir)=>{
-  calMonth+=dir;
-  if(calMonth<0){calMonth=11;calYear--;}
-  if(calMonth>11){calMonth=0;calYear++;}
-  renderCalendar();
-  document.getElementById('cal-day-detail').innerHTML='';
-};
-
-window.showCalDay=(dateStr)=>{
+window.calNav=(dir)=>{calM+=dir;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}renderCalendar();document.getElementById('cal-day-detail').innerHTML='';};
+window.showCalDay=(ds)=>{
   const sym=CURRENCIES[currentCurrency]?.symbol||currentCurrency;
-  const dayExps=expenses.filter(e=>e.dateStr===dateStr);
+  const de=expenses.filter(e=>e.dateStr===ds);
   const el=document.getElementById('cal-day-detail');
-  if(!dayExps.length){el.innerHTML=`<div class="stat-card"><p style="color:var(--text-muted);font-size:14px;text-align:center">No expenses on ${dateStr}</p></div>`;return;}
-  const total=dayExps.reduce((s,e)=>s+e.amount,0);
-  el.innerHTML=`<div class="stat-card">
-    <div class="section-title" style="margin-bottom:12px"><i class="fas fa-calendar-day"></i>${dateStr}</div>
-    ${dayExps.map(e=>{const s=CURRENCIES[e.currency]?.symbol||e.currency;return`<div class="stat-row"><span class="stat-label">${escHtml(e.name)} <span class="item-cat">${e.category}</span></span><span class="stat-val">${s}${formatNumber(e.amount)}</span></div>`}).join('')}
-    <div class="stat-row"><span class="stat-label" style="font-weight:700">Total</span><span class="stat-val gold">${sym}${formatNumber(total)}</span></div>
-  </div>`;
+  if(!de.length){el.innerHTML=`<div class="stat-card"><p style="color:var(--text-muted);font-size:14px;text-align:center">No expenses on ${ds}</p></div>`;return;}
+  const total=de.reduce((s,e)=>s+e.amount,0);
+  el.innerHTML=`<div class="stat-card"><div class="section-title" style="margin-bottom:12px"><i class="fas fa-calendar-day"></i>${ds}</div>${de.map(e=>{const s=CURRENCIES[e.currency]?.symbol||e.currency;return`<div class="stat-row"><span class="stat-label">${esc(e.name)}<span class="item-cat">${e.category}</span></span><span class="stat-val">${s}${fmt(e.amount)}</span></div>`;}).join('')}<div class="stat-row"><span class="stat-label" style="font-weight:700">Total</span><span class="stat-val gold">${sym}${fmt(total)}</span></div></div>`;
 };
 
 // ===== CURRENCY =====
-window.changeCurrency=(code)=>{
+function applyCurrency(code){
   currentCurrency=code;
   localStorage.setItem('exptrack_currency',code);
-  const info=CURRENCIES[code];
+  const info=CURRENCIES[code]||{symbol:code,name:code};
   document.getElementById('currency-display').textContent=`${info.name} (${info.symbol})`;
   document.getElementById('amount-symbol').textContent=info.symbol;
   document.getElementById('currency-symbol-label').textContent=info.symbol;
   document.getElementById('settings-currency-display').textContent=`${code} — ${info.name}`;
-  renderAll();
-  showToast(`Currency changed to ${code}`, 'success');
+  renderSummary();
+}
+window.changeCurrency=(code)=>{applyCurrency(code);showToast(`Currency: ${code}`,'success');};
+
+// ===== CALCULATOR =====
+let calcCur='0',calcExpr='',calcOp='',calcPrev='',calcNew=true,calcHist=[];
+function calcDisp(){
+  document.getElementById('calc-result').textContent=calcCur==='Error'?'Error':addCommas(calcCur);
+  document.getElementById('calc-expr').textContent=calcExpr;
+}
+function addCommas(s){
+  if(!s||s==='0'||s==='-')return s;
+  const neg=s.startsWith('-');const abs=neg?s.slice(1):s;
+  const p=abs.split('.');p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return(neg?'-':'')+p.join('.');
+}
+window.calcNum=(n)=>{
+  if(calcCur==='Error'){calcCur='0';calcNew=true;}
+  if(n==='.'&&calcCur.includes('.'))return;
+  if(calcNew){calcCur=n==='.'?'0.':n;calcNew=false;}
+  else{calcCur=calcCur==='0'&&n!=='.'?n:calcCur+n;}
+  calcDisp();
 };
+window.calcOp=(op)=>{
+  if(calcCur==='Error')calcCur='0';
+  if(calcOp&&!calcNew)calcEquals(true);
+  calcPrev=calcCur;calcOp=op;calcExpr=addCommas(calcCur)+' '+op;calcNew=true;calcDisp();
+};
+window.calcEquals=(chain)=>{
+  if(!calcOp||calcPrev==='')return;
+  const a=parseFloat(calcPrev),b=parseFloat(calcCur);
+  let r;
+  if(calcOp==='÷')r=b===0?'Error':a/b;
+  else if(calcOp==='×')r=a*b;
+  else if(calcOp==='−')r=a-b;
+  else r=a+b;
+  const expr=calcExpr+' '+addCommas(calcCur)+' =';
+  const ans=r==='Error'?'Error':String(parseFloat(r.toFixed(10)));
+  if(!chain){calcHist.unshift({expr,ans});if(calcHist.length>20)calcHist.pop();renderCalcHist();calcExpr='';calcOp='';calcPrev='';}
+  calcCur=ans;calcNew=true;calcDisp();
+};
+window.calcFn=(fn)=>{
+  if(fn==='AC'){calcCur='0';calcExpr='';calcOp='';calcPrev='';calcNew=true;}
+  else if(fn==='+/-')calcCur=calcCur.startsWith('-')?calcCur.slice(1):'-'+calcCur;
+  else if(fn==='%'){const v=parseFloat(calcCur);if(!isNaN(v))calcCur=String(v/100);}
+  calcDisp();
+};
+function renderCalcHist(){
+  const el=document.getElementById('calc-hist-list');
+  el.innerHTML=calcHist.length?calcHist.map(h=>`<div class="calc-hist-item"><span class="calc-hist-expr">${h.expr}</span><span class="calc-hist-ans">${addCommas(h.ans)}</span></div>`).join(''):'<p style="color:var(--text-muted);font-size:13px">No calculations yet.</p>';
+}
+window.clearCalcHistory=()=>{calcHist=[];renderCalcHist();};
 
 // ===== UTILS =====
-function formatNumber(n){
-  if(n===undefined||n===null)return'0.00';
-  const parts=parseFloat(n).toFixed(2).split('.');
-  parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
-  return parts.join('.');
-}
-
-function formatDateKey(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-function formatTime(d){let h=d.getHours(),m=d.getMinutes(),ampm=h>=12?'PM':'AM';h=h%12||12;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ampm}`;}
-
-function getDayLabel(dateStr){
-  const today=formatDateKey(new Date());
-  const yesterday=formatDateKey(new Date(Date.now()-86400000));
-  if(dateStr===today)return'TODAY · '+dateStr;
-  if(dateStr===yesterday)return'YESTERDAY · '+dateStr;
-  return dateStr;
-}
-
-function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
+function fmt(n){if(!n)return'0.00';const p=parseFloat(n).toFixed(2).split('.');p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');return p.join('.');}
+function dateKey(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function timeStr(d){let h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM';h=h%12||12;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ap}`;}
+function dayLabel(ds){const t=dateKey(new Date()),y=dateKey(new Date(Date.now()-86400000));return ds===t?'TODAY · '+ds:ds===y?'YESTERDAY · '+ds:ds;}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function updateDate(){
   const now=new Date();
   const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1091,41 +979,30 @@ function updateDate(){
   document.getElementById('hdr-day').textContent=days[now.getDay()];
 }
 
-// ===== NUMBER TO WORDS =====
 function numToWords(n){
   if(isNaN(n)||n<=0)return'';
   const a=['','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
   const b=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
-  function hw(n){
-    if(n<20)return a[n];
-    if(n<100)return b[Math.floor(n/10)]+(n%10?' '+a[n%10]:'');
-    return a[Math.floor(n/100)]+' hundred'+(n%100?' '+hw(n%100):'');
-  }
-  const int=Math.floor(n);
-  const dec=Math.round((n-int)*100);
-  let s='';
+  function hw(n){if(n<20)return a[n];if(n<100)return b[Math.floor(n/10)]+(n%10?' '+a[n%10]:'');return a[Math.floor(n/100)]+' hundred'+(n%100?' '+hw(n%100):'');}
+  const int=Math.floor(n);let s='';
   if(int>=10000000)s+=hw(Math.floor(int/10000000))+' crore ';
   if(int>=100000)s+=hw(Math.floor((int%10000000)/100000))+' lakh ';
   if(int>=1000)s+=hw(Math.floor((int%100000)/1000))+' thousand ';
-  if(int>=100)s+=hw(Math.floor((int%1000)/100))+' hundred ';
-  if(int%100)s+=hw(int%100);
-  s=s.trim();
-  if(dec>0)s+=' and '+hw(dec)+' paise';
-  return s.charAt(0).toUpperCase()+s.slice(1);
+  if(int%100||(!s&&int>=100))s+=hw(int%100||(int>=100?int%1000:0));
+  s=s.trim();return s.charAt(0).toUpperCase()+s.slice(1);
 }
 
 window.onAmountInput=(el)=>{
   let raw=el.value.replace(/[^0-9.]/g,'');
   const parts=raw.split('.');
   if(parts.length>2)raw=parts[0]+'.'+parts.slice(1).join('');
-  const intPart=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
-  el.value=parts.length>1?intPart+'.'+parts[1]:intPart;
+  const ip=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  el.value=parts.length>1?ip+'.'+parts[1]:ip;
   const num=parseFloat(raw);
-  const wEl=document.getElementById('amount-words');
-  wEl.textContent=(!isNaN(num)&&num>0)?numToWords(num):'';
+  document.getElementById('amount-words').textContent=(!isNaN(num)&&num>0)?numToWords(num):'';
 };
 
-// ===== UI INTERACTIONS =====
+// ===== UI =====
 window.switchTab=(tab)=>{
   document.getElementById('login-form').style.display=tab==='login'?'block':'none';
   document.getElementById('signup-form').style.display=tab==='signup'?'block':'none';
@@ -1140,43 +1017,37 @@ window.togglePw=(id,el)=>{
   el.innerHTML=show?'<i class="fas fa-eye-slash"></i>':'<i class="fas fa-eye"></i>';
 };
 
-let currentNav='home';
 window.switchNav=(tab,btn)=>{
   currentNav=tab;
-  document.getElementById('tab-home').style.display=tab==='home'?'block':'none';
-  document.getElementById('tab-stats').style.display=tab==='stats'?'block':'none';
-  document.getElementById('tab-calendar').style.display=tab==='calendar'?'block':'none';
-  document.getElementById('tab-settings').style.display=tab==='settings'?'block':'none';
+  ['home','stats','calendar','settings'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+  });
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   btn.classList.add('active');
   if(tab==='calendar')renderCalendar();
+  if(tab==='settings')detectInstallState();
 };
 
 window.focusAdd=()=>{
-  if(currentNav!=='home'){
-    document.querySelectorAll('.nav-item')[0].click();
-  }
+  if(currentNav!=='home')document.querySelectorAll('.nav-item')[0].click();
   setTimeout(()=>document.getElementById('exp-name').focus(),200);
 };
 
 window.toggleDay=(id)=>{
   const el=document.getElementById(id);
-  const toggle=document.getElementById('dt'+id.replace('dg',''));
-  if(!el||!toggle)return;
+  const tog=document.getElementById('dt'+id.replace('dg',''));
+  if(!el||!tog)return;
   const hidden=el.style.display==='none';
   el.style.display=hidden?'block':'none';
-  toggle.classList.toggle('collapsed',!hidden);
+  tog.classList.toggle('collapsed',!hidden);
 };
 
 window.selectCat=(el,cat)=>{
   document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  el.dataset.cat=cat;
+  el.classList.add('active');el.dataset.cat=cat;
 };
-// Set data-cat on all chips initially
 document.querySelectorAll('.cat-chip').forEach(c=>{c.dataset.cat=c.textContent.replace(/[^\w]/g,'').trim();});
 
-let isDark=localStorage.getItem('exptrack_dark')==='true';
 window.toggleTheme=()=>{
   isDark=!isDark;
   document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
@@ -1185,117 +1056,80 @@ window.toggleTheme=()=>{
   const dt=document.getElementById('dark-toggle');
   if(dt)dt.className='toggle-switch'+(isDark?' on':'');
 };
-if(isDark){document.documentElement.setAttribute('data-theme','dark');document.getElementById('theme-icon').className='fas fa-sun';}
 
-window.confirmClearAll=()=>{document.getElementById('modal-overlay').classList.add('show');};
-window.closeModal=()=>{document.getElementById('modal-overlay').classList.remove('show');};
+window.confirmClearAll=()=>document.getElementById('modal-overlay').classList.add('show');
+window.closeModal=()=>document.getElementById('modal-overlay').classList.remove('show');
 document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('modal-overlay'))closeModal();});
 
 let toastTimer;
 window.showToast=(msg,type)=>{
   const t=document.getElementById('toast');
-  t.textContent=msg;t.className='toast '+(type||'');
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+  t.textContent=msg;t.className='toast '+(type||'');t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
 };
-
-// Load saved currency
-const savedCurrency=localStorage.getItem('exptrack_currency')||'INR';
-setTimeout(()=>{
-  const picker=document.getElementById('currency-picker');
-  if(picker){picker.value=savedCurrency;changeCurrency(savedCurrency);}
-},100);
 
 updateDate();
 setInterval(updateDate,60000);
 
-// ===== PWA INSTALL =====
-let deferredPrompt=null;
-
-// Store prompt as soon as browser fires it — even before login
+// ===== PWA =====
 window.addEventListener('beforeinstallprompt',(e)=>{
-  e.preventDefault();
-  deferredPrompt=e;
-  // Show banner if app is visible
-  if(document.getElementById('app-screen').style.display!=='none'){
-    if(!localStorage.getItem('exptrack_install_dismissed')){
-      setTimeout(()=>{ document.getElementById('install-banner').style.display='flex'; },2000);
-    }
+  e.preventDefault();deferredPrompt=e;
+  if(!localStorage.getItem('pwa_dismissed')){
+    setTimeout(()=>{
+      if(document.getElementById('app-screen').style.display!=='none'){
+        document.getElementById('install-banner').style.display='flex';
+      }
+    },2500);
   }
-  detectInstallState();
 });
 
 function detectInstallState(){
-  const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
-  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
-  const isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-  const installCard=document.getElementById('install-card');
-  const iosCard=document.getElementById('ios-install-card');
-  const installedCard=document.getElementById('installed-card');
-  if(!installCard)return;
-
-  if(isInstalled){
-    installedCard.style.display='block';
-    installCard.style.display='none';
-    iosCard.style.display='none';
-    document.getElementById('install-banner').style.display='none';
-  } else if(isIOS&&isSafari){
-    iosCard.style.display='block';
-    installCard.style.display='none';
-  } else {
-    // Show install card always — works for Chrome desktop and Android
-    installCard.style.display='block';
-  }
+  const installed=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isSafari=!!navigator.userAgent.match(/Version\/[\d.]+.*Safari/);
+  const ic=document.getElementById('install-card');
+  const ios=document.getElementById('ios-install-card');
+  const done=document.getElementById('installed-card');
+  if(!ic)return;
+  if(installed){done.style.display='block';ic.style.display='none';ios.style.display='none';}
+  else if(isIOS&&isSafari){ios.style.display='block';ic.style.display='none';}
+  else{ic.style.display='block';}
 }
 
 window.installApp=async()=>{
+  document.getElementById('install-banner').style.display='none';
   if(deferredPrompt){
     deferredPrompt.prompt();
     const{outcome}=await deferredPrompt.userChoice;
+    deferredPrompt=null;
     if(outcome==='accepted'){
-      showToast('App installed! 🎉','success');
       document.getElementById('install-card').style.display='none';
       document.getElementById('installed-card').style.display='block';
+      showToast('App installed! 🎉','success');
     }
-    deferredPrompt=null;
-  } else {
-    // No prompt available — guide user
-    showToast('In Chrome: click the ⊕ icon in the address bar to install','success');
+  }else{
+    showToast('Look for ⊕ icon in your browser address bar','success');
   }
-  document.getElementById('install-banner').style.display='none';
 };
 
 window.dismissInstall=()=>{
   document.getElementById('install-banner').style.display='none';
-  localStorage.setItem('exptrack_install_dismissed','true');
+  localStorage.setItem('pwa_dismissed','true');
 };
 
 window.addEventListener('appinstalled',()=>{
   document.getElementById('install-banner').style.display='none';
-  document.getElementById('install-card').style.display='none';
-  document.getElementById('installed-card').style.display='block';
+  detectInstallState();
   showToast('Expence Tracker installed! 🎉','success');
 });
 
-// Run detection when settings tab opens
-const _origSwitchNav=window.switchNav;
-window.switchNav=(tab,btn)=>{
-  _origSwitchNav(tab,btn);
-  if(tab==='settings')detectInstallState();
-};
-
-// Register Service Worker with relative path
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').then(reg=>{
-    console.log('SW registered');
-    detectInstallState();
-  }).catch(e=>console.log('SW error:',e));
+  navigator.serviceWorker.register('./sw.js')
+    .then(()=>detectInstallState())
+    .catch(e=>console.log('SW:',e));
 }
+setTimeout(detectInstallState,1000);
 
-// Run detection after short delay
-setTimeout(detectInstallState, 800);
 </script>
 </body>
 </html>
