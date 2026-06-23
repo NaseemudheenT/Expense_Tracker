@@ -630,12 +630,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,query,orderBy,writeBatch,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,query,orderBy,writeBatch,getDocs,enableIndexedDbPersistence}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig={apiKey:"AIzaSyD6eUkcF1DR5Tj_oMNmJGHDm06XzKLGBg4",authDomain:"expense-tracker-5c250.firebaseapp.com",projectId:"expense-tracker-5c250",storageBucket:"expense-tracker-5c250.firebasestorage.app",messagingSenderId:"770528221263",appId:"1:770528221263:web:d85908f947ff233a07f23a",measurementId:"G-NGR7KC6ESL"};
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
+// Enable offline persistence — data works even without internet
+enableIndexedDbPersistence(db).catch(()=>{});
 let unsubscribe=null;
 let currentUser=null;
 let expenses=[];
@@ -793,27 +795,20 @@ function loadFromCache(uid){
 function subscribeExpenses(uid){
   if(unsubscribe)unsubscribe();
 
-  // Load THIS user's cache instantly
+  // ALWAYS load cache instantly — no spinner ever
   const cached=loadFromCache(uid);
-  if(cached.length>0){
-    expenses=cached;
-    renderAll();
-  } else {
-    document.getElementById('history-list').innerHTML=
-      '<div class="loading-state"><div class="spinner"></div><p>Loading your expenses...</p></div>';
-  }
+  expenses=cached;
+  renderAll(); // show instantly from cache (even if empty)
 
-  // Subscribe Firebase for live updates
+  // Firebase updates silently in background
   const q=query(collection(db,'users',uid,'expenses'),orderBy('timestamp','desc'));
   unsubscribe=onSnapshot(q,(snap)=>{
     expenses=snap.docs.map(d=>({id:d.id,...d.data()}));
     saveToCache(uid,expenses);
-    renderAll();
+    renderAll(); // update UI silently when Firebase responds
   },(err)=>{
-    if(expenses.length===0){
-      document.getElementById('history-list').innerHTML=
-        '<div class="empty-state"><i class="fas fa-wifi-slash"></i><p>You\'re offline. Cached data shown when available.</p></div>';
-    }
+    // Offline - cached data already showing, do nothing
+    console.log('Offline mode - showing cached data');
   });
 }
 
