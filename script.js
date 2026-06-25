@@ -1,805 +1,514 @@
-// ============================================================
-// script.js
-// Full application logic for Expence Tracker.
-//
-// Architecture follows this exact pipeline for every expense:
-//
-//   INPUT  ->  VALIDATION  ->  CREATE TRANSACTION  ->  SAVE
-//          ->  VERIFY SAVE ->  RECALCULATE TOTALS   ->  INTEGRITY CHECK
-//          ->  UPDATE DASHBOARD -> BACKUP
-//
-// Transactions (expense documents) are the ONLY permanent data.
-// Every number shown on screen (today's total, today's count,
-// section totals) is recalculated live from the transaction list,
-// never stored as a separate "total" field. This guarantees the
-// dashboard can never drift out of sync with the real data.
-// ============================================================
+// ===== FIREBASE CONFIG =====
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,updateProfile,GoogleAuthProvider,signInWithRedirect,getRedirectResult}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import{getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,query,orderBy,writeBatch,getDocs}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-import { auth, db } from "./firebase.js";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut,
-  updateProfile
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  collection,
-  addDoc,
-  doc,
-  getDoc,
-  deleteDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp,
-  writeBatch
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app=initializeApp({
+  apiKey:'AIzaSyD6eUkcF1DR5Tj_oMNmJGHDm06XzKLGBg4',
+  authDomain:'expense-tracker-5c250.firebaseapp.com',
+  projectId:'expense-tracker-5c250',
+  storageBucket:'expense-tracker-5c250.firebasestorage.app',
+  messagingSenderId:'770528221263',
+  appId:'1:770528221263:web:d85908f947ff233a07f23a'
+});
+const auth=getAuth(app);
+const db=getFirestore(app);
 
-/* ============================================================
-   GLOBAL STATE
-   ============================================================ */
-let currentUser = null;          // Firebase user object
-let expensesCache = [];          // Local in-memory mirror of Firestore data (source of truth for rendering)
-let unsubscribeExpenses = null;  // Firestore real-time listener detach function
-let pendingDeleteAction = null;  // Function to run if the confirm modal is accepted
+// ===== STATE =====
+let uid=null,expenses=[],unsub=null;
+let cur=localStorage.getItem('et_cur')||'INR';
+let dark=localStorage.getItem('et_dark')==='1';
+let deferredPrompt=null;
+let calY=new Date().getFullYear(),calM=new Date().getMonth();
 
-/* ============================================================
-   DOM REFERENCES
-   ============================================================ */
-const $ = (id) => document.getElementById(id);
+// ===== CURRENCIES =====
+const CURR={
+  INR:{s:'₹',n:'Indian Rupee'},USD:{s:'$',n:'US Dollar'},EUR:{s:'€',n:'Euro'},
+  GBP:{s:'£',n:'British Pound'},JPY:{s:'¥',n:'Japanese Yen'},AED:{s:'د.إ',n:'UAE Dirham'},
+  SGD:{s:'S$',n:'Singapore Dollar'},AUD:{s:'A$',n:'Australian Dollar'},
+  CAD:{s:'C$',n:'Canadian Dollar'},CHF:{s:'Fr',n:'Swiss Franc'},
+  CNY:{s:'¥',n:'Chinese Yuan'},HKD:{s:'HK$',n:'Hong Kong Dollar'},
+  MYR:{s:'RM',n:'Malaysian Ringgit'},THB:{s:'฿',n:'Thai Baht'},
+  SAR:{s:'﷼',n:'Saudi Riyal'},QAR:{s:'﷼',n:'Qatari Riyal'},
+  KWD:{s:'د.ك',n:'Kuwaiti Dinar'},BHD:{s:'BD',n:'Bahraini Dinar'},
+  OMR:{s:'﷼',n:'Omani Rial'},NZD:{s:'NZ$',n:'New Zealand Dollar'},
+  ZAR:{s:'R',n:'South African Rand'},BRL:{s:'R$',n:'Brazilian Real'},
+  MXN:{s:'$',n:'Mexican Peso'},IDR:{s:'Rp',n:'Indonesian Rupiah'},
+  PHP:{s:'₱',n:'Philippine Peso'},PKR:{s:'₨',n:'Pakistani Rupee'},
+  BDT:{s:'৳',n:'Bangladeshi Taka'},LKR:{s:'Rs',n:'Sri Lankan Rupee'},
+  NPR:{s:'Rs',n:'Nepalese Rupee'},KRW:{s:'₩',n:'South Korean Won'},
+  TRY:{s:'₺',n:'Turkish Lira'},RUB:{s:'₽',n:'Russian Ruble'},
+  SEK:{s:'kr',n:'Swedish Krona'},NOK:{s:'kr',n:'Norwegian Krone'},
+  DKK:{s:'kr',n:'Danish Krone'},PLN:{s:'zł',n:'Polish Zloty'}
+};
 
-const authScreen = $("authScreen");
-const appScreen = $("appScreen");
+// ===== CACHE =====
+function saveCache(u,d){try{localStorage.setItem('et_'+u,JSON.stringify(d));}catch(e){}}
+function loadCache(u){try{const d=localStorage.getItem('et_'+u);return d?JSON.parse(d):[];}catch(e){return[];}}
+function clearCache(u){try{localStorage.removeItem('et_'+u);}catch(e){}}
 
-const tabLogin = $("tabLogin");
-const tabSignup = $("tabSignup");
-const loginForm = $("loginForm");
-const signupForm = $("signupForm");
-const authError = $("authError");
-const goToSignup = $("goToSignup");
-const goToLogin = $("goToLogin");
-
-const menuBtn = $("menuBtn");
-const sidebar = $("sidebar");
-const sidebarOverlay = $("sidebarOverlay");
-const sidebarClose = $("sidebarClose");
-const sidebarName = $("sidebarName");
-const sidebarEmail = $("sidebarEmail");
-const sidebarAvatar = $("sidebarAvatar");
-const logoutBtn = $("logoutBtn");
-const sidebarTheme = $("sidebarTheme");
-const sidebarExport = $("sidebarExport");
-
-const themeBtn = $("themeBtn");
-
-const todayAmount = $("todayAmount");
-const todayCount = $("todayCount");
-const todayDateLine1 = $("todayDateLine1");
-const todayDateLine2 = $("todayDateLine2");
-
-const addExpenseForm = $("addExpenseForm");
-const expenseName = $("expenseName");
-const expenseAmount = $("expenseAmount");
-const expenseCurrency = $("expenseCurrency");
-const expenseError = $("expenseError");
-const addExpenseBtn = $("addExpenseBtn");
-
-const historyList = $("historyList");
-const emptyState = $("emptyState");
-const clearAllBtn = $("clearAllBtn");
-
-const confirmModal = $("confirmModal");
-const confirmTitle = $("confirmTitle");
-const confirmText = $("confirmText");
-const confirmCancel = $("confirmCancel");
-const confirmOk = $("confirmOk");
-
-const toastContainer = $("toastContainer");
-
-const navHome = $("navHome");
-const navAdd = $("navAdd");
-const navCalendar = $("navCalendar");
-const navStats = $("navStats");
-const navSettings = $("navSettings");
-
-const CURRENCY_SYMBOLS = { INR: "₹", USD: "$", EUR: "€", GBP: "£" };
-
-/* ============================================================
-   UTILITIES
-   ============================================================ */
-
-function showToast(message, type = "success") {
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
-  toast.textContent = message;
-  toastContainer.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add("show"));
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 300);
-  }, 3200);
+// ===== THEME =====
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  const ti=document.getElementById('theme-icon');
+  if(ti)ti.className=dark?'fas fa-sun':'fas fa-moon';
+  const dt=document.getElementById('dark-toggle');
+  if(dt)dt.className='toggle-sw'+(dark?' on':'');
 }
+applyTheme();
 
-function setButtonLoading(button, isLoading) {
-  const label = button.querySelector(".btn-label");
-  const spinner = button.querySelector(".btn-spinner");
-  button.disabled = isLoading;
-  if (spinner) spinner.classList.toggle("hidden", !isLoading);
-  if (label) label.style.opacity = isLoading ? "0.55" : "1";
-}
+// ===== AUTH STATE =====
+document.getElementById('auth-screen').style.display='flex';
 
-function formatCurrency(amount, currency) {
-  const symbol = CURRENCY_SYMBOLS[currency] || currency + " ";
-  return `${symbol} ${Number(amount).toFixed(2)}`;
-}
-
-function friendlyAuthError(error) {
-  const code = error && error.code ? error.code : "";
-  const map = {
-    "auth/email-already-in-use": "That email is already registered. Try logging in instead.",
-    "auth/invalid-email": "Please enter a valid email address.",
-    "auth/weak-password": "Password should be at least 6 characters.",
-    "auth/user-not-found": "No account found with that email.",
-    "auth/wrong-password": "Incorrect password. Please try again.",
-    "auth/invalid-credential": "Incorrect email or password.",
-    "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
-    "auth/network-request-failed": "Network error. Check your internet connection."
-  };
-  return map[code] || error.message || "Something went wrong. Please try again.";
-}
-
-function isSameDay(dateA, dateB) {
-  return (
-    dateA.getFullYear() === dateB.getFullYear() &&
-    dateA.getMonth() === dateB.getMonth() &&
-    dateA.getDate() === dateB.getDate()
-  );
-}
-
-function startOfDay(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-/* ============================================================
-   AUTH SCREEN — TAB SWITCHING
-   ============================================================ */
-function showLoginTab() {
-  tabLogin.classList.add("active");
-  tabSignup.classList.remove("active");
-  loginForm.classList.remove("hidden");
-  signupForm.classList.add("hidden");
-  authError.classList.add("hidden");
-}
-function showSignupTab() {
-  tabSignup.classList.add("active");
-  tabLogin.classList.remove("active");
-  signupForm.classList.remove("hidden");
-  loginForm.classList.add("hidden");
-  authError.classList.add("hidden");
-}
-tabLogin.addEventListener("click", showLoginTab);
-tabSignup.addEventListener("click", showSignupTab);
-goToSignup.addEventListener("click", (e) => { e.preventDefault(); showSignupTab(); });
-goToLogin.addEventListener("click", (e) => { e.preventDefault(); showLoginTab(); });
-
-function showAuthError(message) {
-  authError.textContent = message;
-  authError.classList.remove("hidden");
-}
-
-/* ============================================================
-   SIGNUP — INPUT -> VALIDATION -> CREATE -> SAVE -> VERIFY
-   ============================================================ */
-signupForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  authError.classList.add("hidden");
-
-  // 1. INPUT SYSTEM
-  const fullName = $("signupName").value.trim();
-  const email = $("signupEmail").value.trim();
-  const password = $("signupPassword").value;
-  const confirmPassword = $("signupConfirm").value;
-
-  // 2. VALIDATION SYSTEM — stop immediately if invalid
-  if (!fullName) return showAuthError("Please enter your full name.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showAuthError("Please enter a valid email address.");
-  if (password.length < 6) return showAuthError("Password must be at least 6 characters.");
-  if (password !== confirmPassword) return showAuthError("Passwords do not match.");
-
-  const btn = $("signupBtn");
-  setButtonLoading(btn, true); // LOADING PROTECTION SYSTEM begins
-
-  try {
-    // 3 & 4. CREATE + SAVE the user account in Firebase Auth
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(credential.user, { displayName: fullName });
-
-    // 5. VERIFY — re-check that the profile name actually stuck
-    if (auth.currentUser && !auth.currentUser.displayName) {
-      await updateProfile(auth.currentUser, { displayName: fullName });
-    }
-
-    showToast("Account created successfully!", "success");
-    signupForm.reset();
-    // onAuthStateChanged will take over and load the dashboard
-  } catch (error) {
-    console.error("Signup error:", error);
-    showAuthError(friendlyAuthError(error));
-  } finally {
-    // 6. LOADING PROTECTION SYSTEM — always resolves, never hangs
-    setButtonLoading(btn, false);
+onAuthStateChanged(auth,user=>{
+  if(user){
+    uid=user.uid;
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    document.getElementById('prof-name').textContent=user.displayName||user.email.split('@')[0];
+    document.getElementById('prof-email').textContent=user.email||'';
+    updateDate();
+    applyCurrency(cur);
+    loadExpenses();
+  }else{
+    uid=null;expenses=[];
+    if(unsub){unsub();unsub=null;}
+    document.getElementById('auth-screen').style.display='flex';
+    document.getElementById('app-screen').style.display='none';
   }
 });
 
-/* ============================================================
-   LOGIN — INPUT -> VALIDATION -> AUTHENTICATE -> VERIFY
-   ============================================================ */
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  authError.classList.add("hidden");
+getRedirectResult(auth).catch(()=>{});
 
-  const email = $("loginEmail").value.trim();
-  const password = $("loginPassword").value;
+// ===== AUTH FUNCTIONS =====
+window.doEmailLogin=async()=>{
+  const e=document.getElementById('login-email').value.trim();
+  const p=document.getElementById('login-pw').value;
+  if(!e||!p){showAuthError('Please fill all fields.');return;}
+  try{await signInWithEmailAndPassword(auth,e,p);}
+  catch(err){showAuthError(getErrMsg(err));}
+};
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showAuthError("Please enter a valid email address.");
-  if (!password) return showAuthError("Please enter your password.");
+window.doEmailSignup=async()=>{
+  const n=document.getElementById('signup-name').value.trim();
+  const e=document.getElementById('signup-email').value.trim();
+  const p=document.getElementById('signup-pw').value;
+  if(!n||!e||!p){showAuthError('Please fill all fields.');return;}
+  if(p.length<6){showAuthError('Password must be at least 6 characters.');return;}
+  try{
+    const c=await createUserWithEmailAndPassword(auth,e,p);
+    await updateProfile(c.user,{displayName:n});
+  }catch(err){showAuthError(getErrMsg(err));}
+};
 
-  const btn = $("loginBtn");
-  setButtonLoading(btn, true);
+window.doGoogleLogin=async()=>{
+  try{
+    const provider=new GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    await signInWithRedirect(auth,provider);
+  }catch(err){showAuthError(getErrMsg(err));}
+};
 
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    loginForm.reset();
-  } catch (error) {
-    console.error("Login error:", error);
-    showAuthError(friendlyAuthError(error));
-  } finally {
-    setButtonLoading(btn, false);
-  }
-});
+window.doLogout=async()=>{
+  if(uid)clearCache(uid);
+  await signOut(auth);
+};
 
-/* ============================================================
-   LOGOUT
-   ============================================================ */
-logoutBtn.addEventListener("click", async () => {
-  try {
-    await signOut(auth);
-    closeSidebar();
-    showToast("Logged out successfully.", "success");
-  } catch (error) {
-    console.error("Logout error:", error);
-    showToast("Could not log out. Try again.", "error");
-  }
-});
-
-/* ============================================================
-   SIDEBAR
-   ============================================================ */
-function openSidebar() {
-  sidebar.classList.add("open");
-  sidebarOverlay.classList.remove("hidden");
+function getErrMsg(e){
+  const c=e.code||'';
+  if(c.includes('user-not-found')||c.includes('wrong-password')||c.includes('invalid-credential'))return'Wrong email or password.';
+  if(c.includes('email-already-in-use'))return'Email already registered. Please sign in.';
+  if(c.includes('invalid-email'))return'Please enter a valid email.';
+  if(c.includes('network'))return'No internet. Please try again.';
+  return'Something went wrong. Please try again.';
 }
-function closeSidebar() {
-  sidebar.classList.remove("open");
-  sidebarOverlay.classList.add("hidden");
-}
-menuBtn.addEventListener("click", openSidebar);
-sidebarClose.addEventListener("click", closeSidebar);
-sidebarOverlay.addEventListener("click", closeSidebar);
-navSettings.addEventListener("click", openSidebar);
-
-/* ============================================================
-   DARK MODE
-   ============================================================ */
-function applyTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("expenceTrackerTheme", theme);
-}
-function toggleTheme() {
-  const current = document.documentElement.getAttribute("data-theme") || "light";
-  applyTheme(current === "light" ? "dark" : "light");
-}
-(function initTheme() {
-  const saved = localStorage.getItem("expenceTrackerTheme");
-  if (saved) applyTheme(saved);
-  else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) applyTheme("dark");
-})();
-themeBtn.addEventListener("click", toggleTheme);
-sidebarTheme.addEventListener("click", toggleTheme);
-
-/* ============================================================
-   BOTTOM NAV
-   ============================================================ */
-navHome.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
-navAdd.addEventListener("click", () => {
-  expenseName.focus();
-  document.querySelector(".add-card").scrollIntoView({ behavior: "smooth", block: "center" });
-});
-navCalendar.addEventListener("click", () => {
-  document.querySelector(".history-card").scrollIntoView({ behavior: "smooth", block: "start" });
-});
-navStats.addEventListener("click", () => showToast("Stats view is coming soon.", "success"));
-
-/* ============================================================
-   AUTH STATE LISTENER — STARTUP VERIFICATION SYSTEM
-   Runs automatically whenever the app loads or auth state changes.
-   ============================================================ */
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    currentUser = user;
-    authScreen.classList.add("hidden");
-    appScreen.classList.remove("hidden");
-
-    const name = user.displayName || "User";
-    sidebarName.textContent = name;
-    sidebarEmail.textContent = user.email || "";
-    sidebarAvatar.textContent = name.charAt(0).toUpperCase();
-
-    // Load -> Verify -> Recalculate -> Render (handled inside subscribeToExpenses)
-    subscribeToExpenses(user.uid);
-  } else {
-    currentUser = null;
-    if (unsubscribeExpenses) {
-      unsubscribeExpenses();
-      unsubscribeExpenses = null;
-    }
-    expensesCache = [];
-    appScreen.classList.add("hidden");
-    authScreen.classList.remove("hidden");
-    showLoginTab();
-  }
-});
-
-/* ============================================================
-   ADD EXPENSE
-   INPUT -> VALIDATION -> CREATE TRANSACTION -> SAVE -> VERIFY
-   ============================================================ */
-addExpenseForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  expenseError.classList.add("hidden");
-
-  if (!currentUser) {
-    showToast("Please log in again.", "error");
-    return;
-  }
-
-  // 1. INPUT SYSTEM
-  const name = expenseName.value.trim();
-  const amountRaw = expenseAmount.value;
-  const currency = expenseCurrency.value;
-
-  // 2. VALIDATION SYSTEM — stop immediately if data is invalid
-  if (!name) {
-    expenseError.textContent = "Please enter an expense name.";
-    expenseError.classList.remove("hidden");
-    expenseName.focus();
-    return;
-  }
-  const amount = parseFloat(amountRaw);
-  if (amountRaw === "" || isNaN(amount) || amount <= 0) {
-    expenseError.textContent = "Please enter a valid amount greater than 0.";
-    expenseError.classList.remove("hidden");
-    expenseAmount.focus();
-    return;
-  }
-  if (amount > 100000000) {
-    expenseError.textContent = "That amount looks too large. Please check it.";
-    expenseError.classList.remove("hidden");
-    return;
-  }
-
-  setButtonLoading(addExpenseBtn, true); // LOADING PROTECTION SYSTEM begins
-
-  // Safety net: never allow the button to stay stuck loading forever,
-  // even if a network call hangs unexpectedly.
-  const safetyTimeout = setTimeout(() => {
-    setButtonLoading(addExpenseBtn, false);
-  }, 15000);
-
-  try {
-    // 3. TRANSACTION CREATION SYSTEM
-    const newTransaction = {
-      name,
-      amount,
-      currency,
-      createdAt: serverTimestamp(),       // authoritative server time
-      clientCreatedAt: new Date().toISOString() // fallback for instant local ordering
-    };
-
-    // 4. SAVE SYSTEM
-    const docRef = await addDoc(
-      collection(db, "users", currentUser.uid, "expenses"),
-      newTransaction
-    );
-
-    // 5. SAVE VERIFICATION SYSTEM — confirm it actually exists in Firestore
-    const savedSnap = await getDoc(docRef);
-    if (!savedSnap.exists()) {
-      throw new Error("Save verification failed: document not found after save.");
-    }
-
-    showToast(`Added "${name}" — ${formatCurrency(amount, currency)}`, "success");
-    addExpenseForm.reset();
-    expenseCurrency.value = currency;
-    expenseName.focus();
-    // Steps 7–9 (Recalculate / Integrity / Dashboard Update) happen automatically
-    // through the real-time onSnapshot listener in subscribeToExpenses().
-  } catch (error) {
-    console.error("Add expense error:", error);
-    // RECOVERY SYSTEM — keep the failed entry locally so nothing is lost,
-    // and let the user know clearly what happened.
-    queueFailedExpense({ name, amount, currency, failedAt: new Date().toISOString() });
-    expenseError.textContent = "Could not save expense. It has been queued locally — " + (error.message || "please check your connection and try again.");
-    expenseError.classList.remove("hidden");
-    showToast("Failed to save expense.", "error");
-  } finally {
-    clearTimeout(safetyTimeout);
-    setButtonLoading(addExpenseBtn, false); // LOADING PROTECTION SYSTEM — always resolves
-  }
-});
-
-/* ============================================================
-   RECOVERY SYSTEM — local queue for failed saves
-   ============================================================ */
-function queueFailedExpense(entry) {
-  if (!currentUser) return;
-  const key = `expenceTracker_failedQueue_${currentUser.uid}`;
-  const queue = JSON.parse(localStorage.getItem(key) || "[]");
-  queue.push(entry);
-  localStorage.setItem(key, JSON.stringify(queue));
+function showAuthError(msg){
+  const el=document.getElementById('auth-error');
+  el.textContent=msg;el.style.display='block';
+  setTimeout(()=>el.style.display='none',4000);
 }
 
-async function retryFailedQueue() {
-  if (!currentUser) return;
-  const key = `expenceTracker_failedQueue_${currentUser.uid}`;
-  const queue = JSON.parse(localStorage.getItem(key) || "[]");
-  if (queue.length === 0) return;
+window.switchAuthTab=tab=>{
+  document.getElementById('login-form').style.display=tab==='login'?'block':'none';
+  document.getElementById('signup-form').style.display=tab==='signup'?'block':'none';
+  document.getElementById('tab-login').className='auth-tab'+(tab==='login'?' active':'');
+  document.getElementById('tab-signup').className='auth-tab'+(tab==='signup'?' active':'');
+  document.getElementById('auth-error').style.display='none';
+};
+window.togglePassword=(id,el)=>{
+  const inp=document.getElementById(id);
+  inp.type=inp.type==='password'?'text':'password';
+  el.innerHTML=inp.type==='text'?'<i class="fas fa-eye-slash"></i>':'<i class="fas fa-eye"></i>';
+};
 
-  const remaining = [];
-  for (const entry of queue) {
-    try {
-      const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
-        name: entry.name,
-        amount: entry.amount,
-        currency: entry.currency,
-        createdAt: serverTimestamp(),
-        clientCreatedAt: entry.failedAt
-      });
-      const snap = await getDoc(docRef);
-      if (!snap.exists()) remaining.push(entry);
-    } catch {
-      remaining.push(entry);
-    }
-  }
-  localStorage.setItem(key, JSON.stringify(remaining));
-  if (queue.length !== remaining.length) {
-    showToast(`Recovered ${queue.length - remaining.length} previously failed expense(s).`, "success");
-  }
+// ===== EXPENSES =====
+function loadExpenses(){
+  expenses=loadCache(uid);
+  renderAll();
+  if(unsub)unsub();
+  const q=query(collection(db,'users',uid,'expenses'),orderBy('timestamp','desc'));
+  unsub=onSnapshot(q,snap=>{
+    expenses=snap.docs.map(d=>({id:d.id,...d.data()}));
+    saveCache(uid,expenses);
+    renderAll();
+  },()=>{});
 }
 
-window.addEventListener("online", retryFailedQueue);
-
-/* ============================================================
-   SUBSCRIBE TO EXPENSES (REAL-TIME)
-   Handles: Recalculation, Data Integrity, Dashboard Update,
-   Backup, and Startup Verification — every time data changes.
-   ============================================================ */
-function subscribeToExpenses(uid) {
-  if (unsubscribeExpenses) unsubscribeExpenses();
-
-  const expensesQuery = query(
-    collection(db, "users", uid, "expenses"),
-    orderBy("createdAt", "desc")
-  );
-
-  unsubscribeExpenses = onSnapshot(
-    expensesQuery,
-    (snapshot) => {
-      // 6. DATA INTEGRITY SYSTEM — dedupe, drop corrupted records
-      const seenIds = new Set();
-      const cleanList = [];
-
-      snapshot.forEach((docSnap) => {
-        if (seenIds.has(docSnap.id)) return; // no duplicates
-        seenIds.add(docSnap.id);
-
-        const data = docSnap.data();
-        const amount = Number(data.amount);
-        const name = typeof data.name === "string" ? data.name.trim() : "";
-
-        // Skip corrupted records instead of crashing the whole dashboard
-        if (!name || isNaN(amount) || amount <= 0) return;
-
-        let date;
-        if (data.createdAt && typeof data.createdAt.toDate === "function") {
-          date = data.createdAt.toDate();
-        } else if (data.clientCreatedAt) {
-          date = new Date(data.clientCreatedAt);
-        } else {
-          date = new Date();
-        }
-
-        cleanList.push({
-          id: docSnap.id,
-          name,
-          amount,
-          currency: data.currency || "INR",
-          date
-        });
-      });
-
-      // Ensure newest-first even when server timestamps are still resolving
-      cleanList.sort((a, b) => b.date - a.date);
-
-      expensesCache = cleanList;
-
-      // BACKUP SYSTEM — keep a local copy in case Firestore is unreachable later
-      try {
-        localStorage.setItem(
-          `expenceTracker_backup_${uid}`,
-          JSON.stringify(cleanList.map((e) => ({ ...e, date: e.date.toISOString() })))
-        );
-      } catch (err) {
-        console.warn("Backup write skipped:", err);
-      }
-
-      retryFailedQueue();
-      renderDashboard(); // 7, 8, 9: Recalculate -> Integrity check -> Render
-    },
-    (error) => {
-      console.error("Realtime listener error:", error);
-      // RECOVERY SYSTEM — fall back to the last known-good local backup
-      try {
-        const backupRaw = localStorage.getItem(`expenceTracker_backup_${uid}`);
-        if (backupRaw) {
-          expensesCache = JSON.parse(backupRaw).map((e) => ({ ...e, date: new Date(e.date) }));
-          renderDashboard();
-          showToast("You're offline — showing your last saved data.", "error");
-        } else {
-          showToast("Could not load your expenses. Check your connection.", "error");
-        }
-      } catch (e) {
-        console.error("Backup restore failed:", e);
-      }
-    }
-  );
-}
-
-/* ============================================================
-   RECALCULATION + DASHBOARD UPDATE SYSTEM
-   Everything visible is derived fresh from expensesCache —
-   nothing is ever read from a pre-stored "total" field.
-   ============================================================ */
-function renderDashboard() {
-  const now = new Date();
-
-  // ---- 7. RECALCULATE: today's total & count ----
-  const todays = expensesCache.filter((e) => isSameDay(e.date, now));
-  const todayTotal = todays.reduce((sum, e) => sum + e.amount, 0);
-
-  // 8. INTEGRITY CHECK — totals must always equal the sum of their transactions.
-  // Because we never store totals separately, this is true by construction;
-  // we still guard against NaN propagation just in case of bad data.
-  const safeTodayTotal = isNaN(todayTotal) ? 0 : todayTotal;
-
-  todayAmount.textContent = formatCurrency(safeTodayTotal, "INR");
-  $("todayCountText").textContent = `${todays.length} Expense${todays.length === 1 ? "" : "s"} Today`;
-
-  todayDateLine1.textContent = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  todayDateLine2.textContent = now.toLocaleDateString("en-US", { weekday: "long" });
-
-  // ---- Group into Today / Yesterday / Older (REPORTING SYSTEM) ----
-  const groups = new Map(); // key: "Today" | "Yesterday" | "DD Mon YYYY" -> { label, total, items: [] }
-  const todayStart = startOfDay(now).getTime();
-  const yesterdayStart = todayStart - 86400000;
-
-  for (const exp of expensesCache) {
-    const expStart = startOfDay(exp.date).getTime();
-    let key, label;
-    if (expStart === todayStart) {
-      key = "today";
-      label = `TODAY • ${exp.date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
-    } else if (expStart === yesterdayStart) {
-      key = "yesterday";
-      label = `YESTERDAY • ${exp.date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
-    } else {
-      key = expStart.toString();
-      label = exp.date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-    }
-    if (!groups.has(key)) groups.set(key, { label, total: 0, items: [] });
-    const group = groups.get(key);
-    group.total += exp.amount;
-    group.items.push(exp);
-  }
-
-  // ---- 9. DASHBOARD UPDATE: render history list ----
-  historyList.innerHTML = "";
-
-  if (expensesCache.length === 0) {
-    historyList.appendChild(emptyState);
-    emptyState.classList.remove("hidden");
-    return;
-  }
-
-  // Sort group keys so "today" and "yesterday" come first, then by recency
-  const orderedKeys = Array.from(groups.keys()).sort((a, b) => {
-    const rank = (k) => (k === "today" ? 0 : k === "yesterday" ? 1 : 2);
-    const rankDiff = rank(a) - rank(b);
-    if (rankDiff !== 0) return rankDiff;
-    return Number(b) - Number(a);
-  });
-
-  for (const key of orderedKeys) {
-    const group = groups.get(key);
-    const section = document.createElement("div");
-    section.className = "day-group";
-
-    const header = document.createElement("div");
-    header.className = "day-header";
-    header.innerHTML = `
-      <span class="day-label">${group.label}</span>
-      <span class="day-meta">
-        <span class="day-total">Total: ${formatCurrency(group.total, "INR")}</span>
-        <span class="day-pill">${group.items.length} Expense${group.items.length === 1 ? "" : "s"}</span>
-      </span>
-    `;
-    section.appendChild(header);
-
-    const itemsWrap = document.createElement("div");
-    itemsWrap.className = "day-items";
-
-    group.items.forEach((exp, index) => {
-      const row = document.createElement("div");
-      row.className = "expense-row";
-      row.innerHTML = `
-        <span class="expense-index">${index + 1}</span>
-        <span class="expense-info">
-          <span class="expense-name">${escapeHtml(exp.name)}</span>
-          <span class="expense-time">${exp.date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
-        </span>
-        <span class="expense-amount">${formatCurrency(exp.amount, exp.currency)}</span>
-        <button class="delete-btn" data-id="${exp.id}" data-name="${escapeHtml(exp.name)}" aria-label="Delete expense">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      `;
-      itemsWrap.appendChild(row);
+window.addExpense=async()=>{
+  const name=document.getElementById('exp-name').value.trim();
+  const raw=document.getElementById('exp-amount').value.replace(/,/g,'');
+  const amount=parseFloat(raw);
+  if(!name){showToast('Enter expense name','err');return;}
+  if(!raw||isNaN(amount)||amount<=0){showToast('Enter valid amount','err');return;}
+  const cat=document.querySelector('.cat-chip.active')?.dataset.cat||'Other';
+  const now=new Date();
+  try{
+    await addDoc(collection(db,'users',uid,'expenses'),{
+      name,amount,currency:cur,category:cat,
+      timestamp:now.getTime(),
+      dateStr:makeDateKey(now),
+      timeStr:makeTimeStr(now)
     });
+    document.getElementById('exp-name').value='';
+    document.getElementById('exp-amount').value='';
+    document.getElementById('amount-words').textContent='';
+    showToast('Expense added!','ok');
+  }catch(e){showToast('Failed to save. Check connection.','err');}
+};
 
-    section.appendChild(itemsWrap);
-    historyList.appendChild(section);
-  }
-}
+window.deleteExpense=async id=>{
+  try{await deleteDoc(doc(db,'users',uid,'expenses',id));showToast('Deleted','ok');}
+  catch(e){showToast('Failed to delete','err');}
+};
 
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-/* ============================================================
-   DELETE — SINGLE EXPENSE (with confirmation + audit log)
-   ============================================================ */
-historyList.addEventListener("click", (e) => {
-  const btn = e.target.closest(".delete-btn");
-  if (!btn) return;
-  const id = btn.dataset.id;
-  const name = btn.dataset.name;
-  openConfirm(
-    "Delete this expense?",
-    `"${name}" will be permanently removed. This cannot be undone.`,
-    () => deleteSingleExpense(id, name)
-  );
-});
-
-async function deleteSingleExpense(id, name) {
-  if (!currentUser) return;
-  try {
-    await deleteDoc(doc(db, "users", currentUser.uid, "expenses", id));
-    auditLog(currentUser.uid, "delete", { id, name });
-    showToast("Expense deleted.", "success");
-  } catch (error) {
-    console.error("Delete error:", error);
-    showToast("Could not delete expense. Try again.", "error");
-  }
-}
-
-/* ============================================================
-   DELETE — CLEAR ALL (batched, with confirmation + audit log)
-   ============================================================ */
-clearAllBtn.addEventListener("click", () => {
-  if (expensesCache.length === 0) {
-    showToast("There's nothing to clear.", "success");
-    return;
-  }
-  openConfirm(
-    "Clear all expenses?",
-    `All ${expensesCache.length} expense record(s) will be permanently deleted. This cannot be undone.`,
-    clearAllExpenses
-  );
-});
-
-async function clearAllExpenses() {
-  if (!currentUser) return;
-  try {
-    const batch = writeBatch(db);
-    expensesCache.forEach((exp) => {
-      batch.delete(doc(db, "users", currentUser.uid, "expenses", exp.id));
-    });
+window.clearAllExpenses=async()=>{
+  closeModal();
+  try{
+    const snap=await getDocs(collection(db,'users',uid,'expenses'));
+    const batch=writeBatch(db);
+    snap.docs.forEach(d=>batch.delete(d.ref));
     await batch.commit();
-    auditLog(currentUser.uid, "clear_all", { count: expensesCache.length });
-    showToast("All expenses cleared.", "success");
-  } catch (error) {
-    console.error("Clear all error:", error);
-    showToast("Could not clear expenses. Try again.", "error");
-  }
+    showToast('All cleared','ok');
+  }catch(e){showToast('Failed to clear','err');}
+};
+
+// ===== RENDER =====
+function renderAll(){
+  renderSummary();
+  renderHistory();
+  if(document.getElementById('tab-cal').style.display==='block')renderCalendar();
 }
 
-/* ============================================================
-   HISTORY / AUDIT SYSTEM
-   ============================================================ */
-function auditLog(uid, action, details) {
-  try {
-    const key = `expenceTracker_audit_${uid}`;
-    const log = JSON.parse(localStorage.getItem(key) || "[]");
-    log.push({ action, details, at: new Date().toISOString() });
-    // Keep the audit log from growing forever
-    localStorage.setItem(key, JSON.stringify(log.slice(-200)));
-  } catch (err) {
-    console.warn("Audit log write skipped:", err);
-  }
+function renderSummary(){
+  const tk=makeDateKey(new Date());
+  const te=expenses.filter(e=>e.dateStr===tk);
+  const tot=te.reduce((s,e)=>s+e.amount,0);
+  const sym=(CURR[cur]||CURR.INR).s;
+  document.getElementById('today-total').textContent=sym+formatNum(tot);
+  document.getElementById('today-count').textContent=te.length+' expense'+(te.length!==1?'s':'')+' today';
 }
 
-/* ============================================================
-   CONFIRM MODAL (shared by single-delete and clear-all)
-   ============================================================ */
-function openConfirm(title, text, onConfirm) {
-  confirmTitle.textContent = title;
-  confirmText.textContent = text;
-  pendingDeleteAction = onConfirm;
-  confirmModal.classList.remove("hidden");
-}
-function closeConfirm() {
-  confirmModal.classList.add("hidden");
-  pendingDeleteAction = null;
-}
-confirmCancel.addEventListener("click", closeConfirm);
-confirmModal.addEventListener("click", (e) => {
-  if (e.target === confirmModal) closeConfirm();
-});
-confirmOk.addEventListener("click", async () => {
-  if (pendingDeleteAction) {
-    const action = pendingDeleteAction;
-    closeConfirm();
-    await action();
-  }
-});
-
-/* ============================================================
-   BACKUP / EXPORT (manual, user-triggered)
-   ============================================================ */
-sidebarExport.addEventListener("click", () => {
-  if (expensesCache.length === 0) {
-    showToast("No expenses to export yet.", "error");
+function renderHistory(){
+  const el=document.getElementById('history-list');
+  if(!expenses.length){
+    el.innerHTML='<div class="empty-state"><i class="fas fa-receipt"></i><p>No expenses yet. Add your first one!</p></div>';
     return;
   }
-  const exportData = expensesCache.map((e) => ({
-    name: e.name,
-    amount: e.amount,
-    currency: e.currency,
-    date: e.date.toISOString()
-  }));
-  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `expence-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  showToast("Backup downloaded.", "success");
-  closeSidebar();
+  const groups={};
+  expenses.forEach(e=>{if(!groups[e.dateStr])groups[e.dateStr]=[];groups[e.dateStr].push(e);});
+  const dates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML=dates.map((ds,di)=>{
+    const items=groups[ds];
+    const tot=items.reduce((s,e)=>s+e.amount,0);
+    const sym=(CURR[items[0]?.currency]||CURR.INR).s;
+    const rows=items.map((e,i)=>{
+      const es=(CURR[e.currency]||CURR.INR).s;
+      const diff=e.currency!==cur;
+      return`<div class="exp-item">
+        <div class="exp-num">${i+1}</div>
+        <div class="exp-info">
+          <div class="exp-name">${escHtml(e.name)}</div>
+          <div class="exp-meta">${e.timeStr} · ${e.dateStr}<span class="exp-cat">${e.category}</span></div>
+        </div>
+        <div>
+          <div class="exp-amount">${es}${formatNum(e.amount)}</div>
+          ${diff?`<div class="exp-cur-note">${e.currency}</div>`:''}
+        </div>
+        <button class="btn-del" onclick="deleteExpense('${e.id}')"><i class="fas fa-trash"></i></button>
+      </div>`;
+    }).join('');
+    return`<div class="day-group">
+      <div class="day-hdr" onclick="toggleDay('dg${di}','dc${di}')">
+        <span class="day-label">${getDayLabel(ds)}</span>
+        <div class="day-meta">
+          <span class="day-total">${sym}${formatNum(tot)}</span>
+          <span class="day-count">${items.length}</span>
+          <i class="fas fa-chevron-down" id="dc${di}" style="color:var(--muted);font-size:12px;transition:transform 0.2s"></i>
+        </div>
+      </div>
+      <div class="day-items" id="dg${di}">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCalendar(){
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month').textContent=months[calM]+' '+calY;
+  const expDates=new Set(expenses.map(e=>e.dateStr));
+  const today=makeDateKey(new Date());
+  const firstDay=new Date(calY,calM,1).getDay();
+  const daysInMonth=new Date(calY,calM+1,0).getDate();
+  let h='<div class="cal-day-name">Su</div><div class="cal-day-name">Mo</div><div class="cal-day-name">Tu</div><div class="cal-day-name">We</div><div class="cal-day-name">Th</div><div class="cal-day-name">Fr</div><div class="cal-day-name">Sa</div>';
+  for(let i=0;i<firstDay;i++)h+='<div></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const k=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const iT=k===today,hasE=expDates.has(k);
+    h+=`<div class="cal-day${iT?' today':hasE?' has-exp':''}" onclick="showCalDay('${k}')">${d}</div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=h;
+}
+
+window.calNavigate=d=>{
+  calM+=d;
+  if(calM<0){calM=11;calY--;}
+  if(calM>11){calM=0;calY++;}
+  renderCalendar();
+  document.getElementById('cal-detail').innerHTML='';
+};
+
+window.showCalDay=k=>{
+  const sym=(CURR[cur]||CURR.INR).s;
+  const de=expenses.filter(e=>e.dateStr===k);
+  const el=document.getElementById('cal-detail');
+  if(!de.length){el.innerHTML=`<div class="stat-card"><p style="color:var(--muted);font-size:14px;text-align:center">No expenses on ${k}</p></div>`;return;}
+  const tot=de.reduce((s,e)=>s+e.amount,0);
+  el.innerHTML=`<div class="stat-card">
+    <div class="sec-title" style="margin-bottom:12px"><i class="fas fa-calendar-day"></i>${k}</div>
+    ${de.map(e=>{const es=(CURR[e.currency]||CURR.INR).s;return`<div class="stat-row"><span>${escHtml(e.name)} <span class="exp-cat">${e.category}</span></span><strong>${es}${formatNum(e.amount)}</strong></div>`;}).join('')}
+    <div class="stat-row"><span style="font-weight:700">Total</span><strong class="gold">${sym}${formatNum(tot)}</strong></div>
+  </div>`;
+};
+
+// ===== CURRENCY =====
+window.changeCurrency=c=>{
+  cur=c;localStorage.setItem('et_cur',c);
+  applyCurrency(c);renderAll();
+  showToast('Currency: '+c,'ok');
+};
+function applyCurrency(c){
+  const info=CURR[c]||CURR.INR;
+  document.getElementById('cur-display').textContent=`${info.n} (${info.s})`;
+  document.getElementById('amt-symbol').textContent=info.s;
+  document.getElementById('amt-sym-label').textContent=info.s;
+  document.getElementById('set-currency').textContent=`${c} — ${info.n}`;
+  const p=document.getElementById('cur-picker');if(p)p.value=c;
+}
+
+// ===== UTILS =====
+function formatNum(n){
+  const p=parseFloat(n||0).toFixed(2).split('.');
+  p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return p.join('.');
+}
+function makeDateKey(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function makeTimeStr(d){let h=d.getHours(),m=d.getMinutes(),a=h>=12?'PM':'AM';h=h%12||12;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} ${a}`;}
+function getDayLabel(ds){
+  const t=makeDateKey(new Date()),y=makeDateKey(new Date(Date.now()-86400000));
+  if(ds===t)return'TODAY · '+ds;if(ds===y)return'YESTERDAY · '+ds;return ds;
+}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function updateDate(){
+  const d=new Date();
+  const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ds=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('header-date').textContent=`${String(d.getDate()).padStart(2,'0')} ${ms[d.getMonth()]} ${d.getFullYear()}`;
+  document.getElementById('header-day').textContent=ds[d.getDay()];
+}
+setInterval(updateDate,60000);
+
+// ===== AMOUNT WORDS =====
+window.onAmountInput=el=>{
+  let r=el.value.replace(/[^0-9.]/g,'');
+  const pt=r.split('.');
+  if(pt.length>2)r=pt[0]+'.'+pt.slice(1).join('');
+  const ip=pt[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  el.value=pt.length>1?ip+'.'+pt[1]:ip;
+  const n=parseFloat(r);
+  document.getElementById('amount-words').textContent=(!isNaN(n)&&n>0)?numToWords(n):'';
+};
+function numToWords(n){
+  if(!n||n<=0)return'';
+  const a=['','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+  const b=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+  function hw(n){if(n<20)return a[n];if(n<100)return b[Math.floor(n/10)]+(n%10?' '+a[n%10]:'');return a[Math.floor(n/100)]+' hundred'+(n%100?' '+hw(n%100):'');}
+  const int=Math.floor(n);let s='';
+  if(int>=10000000)s+=hw(Math.floor(int/10000000))+' crore ';
+  if(int>=100000)s+=hw(Math.floor((int%10000000)/100000))+' lakh ';
+  if(int>=1000)s+=hw(Math.floor((int%100000)/1000))+' thousand ';
+  if(int%1000)s+=hw(int%1000);
+  s=s.trim();
+  const dec=Math.round((n-int)*100);
+  if(dec>0)s+=' and '+hw(dec)+' paise';
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
+// ===== UI =====
+window.selectCat=el=>{
+  document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+};
+window.toggleDay=(id,arrow)=>{
+  const el=document.getElementById(id);
+  const ar=document.getElementById(arrow);
+  if(!el)return;
+  const hidden=el.style.display==='none';
+  el.style.display=hidden?'block':'none';
+  if(ar)ar.style.transform=hidden?'':'rotate(-90deg)';
+};
+window.toggleTheme=()=>{
+  dark=!dark;localStorage.setItem('et_dark',dark?'1':'0');applyTheme();
+};
+window.switchTab=tab=>{
+  ['home','calc','cal','set'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+    const nb=document.getElementById('nav-'+t);
+    if(nb)nb.className='nav-btn'+(t===tab?' active':'');
+  });
+  if(tab==='cal')renderCalendar();
+  if(tab==='set')detectInstall();
+};
+window.goHome=()=>{
+  switchTab('home');
+  setTimeout(()=>document.getElementById('exp-name').focus(),150);
+};
+window.openModal=()=>document.getElementById('modal').classList.add('show');
+window.closeModal=()=>document.getElementById('modal').classList.remove('show');
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+
+let toastTimer;
+function showToast(msg,type){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast '+(type||'');
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ===== CALCULATOR =====
+let cCur='0',cExpr='',cOpr='',cPrev='',cNew=true,cHist=[];
+function cDisp(){
+  document.getElementById('calc-result').textContent=cCur==='Error'?'Error':cFormat(cCur);
+  document.getElementById('calc-expr').textContent=cExpr;
+}
+function cFormat(s){
+  if(!s||s==='0'||s==='-')return s;
+  const neg=s.startsWith('-');const abs=neg?s.slice(1):s;
+  const pts=abs.split('.');
+  pts[0]=pts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return(neg?'-':'')+pts.join('.');
+}
+window.calcNum=n=>{
+  if(cCur==='Error'){cCur='0';cNew=true;}
+  if(n==='.'&&cCur.includes('.'))return;
+  if(cNew){cCur=(n==='.'?'0.':n);cNew=false;}
+  else{cCur=cCur==='0'&&n!=='.'?n:cCur+n;}
+  cDisp();
+};
+window.calcOp=op=>{
+  if(cCur==='Error')cCur='0';
+  if(cOpr&&!cNew)calcEq(true);
+  cPrev=cCur;cOpr=op;cExpr=cFormat(cCur)+' '+op;cNew=true;cDisp();
+};
+window.calcEq=(chain)=>{
+  if(!cOpr||cPrev==='')return;
+  const a=parseFloat(cPrev),b=parseFloat(cCur);
+  let res;
+  if(cOpr==='÷')res=b===0?'Error':a/b;
+  else if(cOpr==='×')res=a*b;
+  else if(cOpr==='−')res=a-b;
+  else res=a+b;
+  const ex=cExpr+' '+cFormat(cCur)+' =';
+  const an=res==='Error'?'Error':String(parseFloat(res.toFixed(10)));
+  if(!chain){
+    cHist.unshift({ex,an});if(cHist.length>20)cHist.pop();
+    renderCalcHist();cExpr='';cOpr='';cPrev='';
+  }
+  cCur=an;cNew=true;cDisp();
+};
+window.calcFn=fn=>{
+  if(fn==='AC'){cCur='0';cExpr='';cOpr='';cPrev='';cNew=true;}
+  else if(fn==='+/-'&&cCur!=='0'&&cCur!=='Error')cCur=cCur.startsWith('-')?cCur.slice(1):'-'+cCur;
+  else if(fn==='%'){const v=parseFloat(cCur);if(!isNaN(v))cCur=String(v/100);}
+  cDisp();
+};
+function renderCalcHist(){
+  const el=document.getElementById('calc-hist');
+  if(!cHist.length){el.innerHTML='<p style="color:var(--muted);font-size:13px">No calculations yet.</p>';return;}
+  el.innerHTML=cHist.map(h=>`<div class="calc-hist-item"><span class="calc-hist-expr">${h.ex}</span><span class="calc-hist-ans">${cFormat(h.an)}</span></div>`).join('');
+}
+window.clearCalcHist=()=>{cHist=[];renderCalcHist();};
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('tab-calc').style.display!=='block')return;
+  if(e.key>='0'&&e.key<='9')calcNum(e.key);
+  else if(e.key==='.')calcNum('.');
+  else if(e.key==='+')calcOp('+');
+  else if(e.key==='-')calcOp('−');
+  else if(e.key==='*')calcOp('×');
+  else if(e.key==='/')calcOp('÷');
+  else if(e.key==='Enter'||e.key==='=')calcEq();
+  else if(e.key==='Escape')calcFn('AC');
+  else if(e.key==='Backspace'){if(!cNew&&cCur.length>1)cCur=cCur.slice(0,-1);else{cCur='0';cNew=true;}cDisp();}
 });
+
+// ===== PWA =====
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  if(!localStorage.getItem('et_inst_dis')){
+    setTimeout(()=>{
+      if(document.getElementById('app-screen').style.display==='block')
+        document.getElementById('install-banner').style.display='flex';
+    },3000);
+  }
+  detectInstall();
+});
+function detectInstall(){
+  const isInst=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const isSaf=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const ic=document.getElementById('install-card');
+  const ioc=document.getElementById('ios-card');
+  const iac=document.getElementById('installed-card');
+  if(!ic)return;
+  if(isInst){ic.style.display='none';if(ioc)ioc.style.display='none';iac.style.display='block';document.getElementById('install-banner').style.display='none';}
+  else if(isIOS&&isSaf){ic.style.display='none';if(ioc)ioc.style.display='block';}
+  else{ic.style.display='block';}
+}
+window.doInstall=async()=>{
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const{outcome}=await deferredPrompt.userChoice;
+    if(outcome==='accepted'){
+      showToast('App installed! 🎉','ok');
+      document.getElementById('install-card').style.display='none';
+      document.getElementById('installed-card').style.display='block';
+    }
+    deferredPrompt=null;
+  }else{
+    showToast('Look for ⊕ icon in browser address bar','ok');
+  }
+  document.getElementById('install-banner').style.display='none';
+};
+window.dismissBanner=()=>{
+  document.getElementById('install-banner').style.display='none';
+  localStorage.setItem('et_inst_dis','1');
+};
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('install-banner').style.display='none';
+  document.getElementById('install-card').style.display='none';
+  document.getElementById('installed-card').style.display='block';
+  showToast('App installed! 🎉','ok');
+});
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').then(()=>setTimeout(detectInstall,800)).catch(()=>{});
+}
+setTimeout(detectInstall,1000);
